@@ -1,0 +1,645 @@
+From 0a66b9f7260988ffdb83ece3ab2f3cf1ebefa5bb Mon Sep 17 00:00:00 2001
+From: Lubomir Rintel <lkundrak@v3.sk>
+Date: Fri, 2 Apr 2010 19:06:52 +0200
+Subject: [PATCH] Revert upstream r18628
+
+We don't need no other crap depedency. I mean, I'm really unwilling
+to package that. Please nooo.
+
+r18628 | user57 | 2009-12-12 10:59:07 +0100 (Sat, 12 Dec 2009) | 1 line
+[GROOVY-3935] Using jansi to handle ansi encoding
+
+http://jira.codehaus.org/browse/GROOVY-3935
+---
+ .../codehaus/groovy/tools/shell/Groovysh.groovy    |   16 +-
+ src/main/org/codehaus/groovy/tools/shell/IO.java   |   12 +-
+ .../org/codehaus/groovy/tools/shell/Main.groovy    |   27 +-
+ .../org/codehaus/groovy/tools/shell/util/ANSI.java |  421 ++++++++++++++++++++
+ .../codehaus/groovy/tools/shell/util/Logger.java   |   19 +-
+ 5 files changed, 450 insertions(+), 45 deletions(-)
+ create mode 100644 src/main/org/codehaus/groovy/tools/shell/util/ANSI.java
+
+diff --git a/src/main/org/codehaus/groovy/tools/shell/Groovysh.groovy b/src/main/org/codehaus/groovy/tools/shell/Groovysh.groovy
+index 0634d0f..28ac156 100644
+--- a/src/main/org/codehaus/groovy/tools/shell/Groovysh.groovy
++++ b/src/main/org/codehaus/groovy/tools/shell/Groovysh.groovy
+@@ -21,14 +21,12 @@
+ 
+ import org.codehaus.groovy.runtime.InvokerHelper
+ import org.codehaus.groovy.tools.shell.util.MessageSource
++import org.codehaus.groovy.tools.shell.util.ANSI.Renderer as AnsiRenderer
+ import org.codehaus.groovy.tools.shell.util.XmlCommandRegistrar
+ import org.codehaus.groovy.runtime.StackTraceUtils
+ import org.codehaus.groovy.tools.shell.util.Preferences
+ import org.codehaus.groovy.tools.shell.Parser
+ import org.codehaus.groovy.tools.shell.ParseCode
+-import org.fusesource.jansi.AnsiRenderer
+-import org.fusesource.jansi.Ansi
+-import org.fusesource.jansi.AnsiConsole
+ 
+ /**
+  * An interactive shell for evaluating Groovy code from the command-line (aka. groovysh).
+@@ -39,13 +37,6 @@
+ class Groovysh
+     extends Shell
+ {
+-    static {
+-        // Install the system adapters
+-        AnsiConsole.systemInstall()
+-
+-        // Register jline ansi detector
+-        Ansi.setDetector(new AnsiDetector())
+-    }
+ 
+     private static final MessageSource messages = new MessageSource(Groovysh.class)
+ 
+@@ -193,11 +184,13 @@
+     //
+     // Prompt
+     //
++    
++    private AnsiRenderer prompt = new AnsiRenderer()
+ 
+     private String renderPrompt() {
+         def lineNum = formatLineNumber(buffers.current().size())
+ 
+-        return AnsiRenderer.render("@|bold groovy:|@${lineNum}@|bold >|@ ")
++        return prompt.render("@|bold groovy:|@${lineNum}@|bold >|@ ")
+     }
+ 
+     /**
+diff --git a/src/main/org/codehaus/groovy/tools/shell/IO.java b/src/main/org/codehaus/groovy/tools/shell/IO.java
+index 0af559d..58633dc 100644
+--- a/src/main/org/codehaus/groovy/tools/shell/IO.java
++++ b/src/main/org/codehaus/groovy/tools/shell/IO.java
+@@ -23,8 +23,8 @@ import java.io.OutputStream;
+ import java.io.PrintWriter;
+ import java.io.Reader;
+ 
++import org.codehaus.groovy.tools.shell.util.ANSI.RenderWriter;
+ import org.codehaus.groovy.tools.shell.util.Preferences;
+-import org.fusesource.jansi.AnsiRenderWriter;
+ 
+ /**
+  * Container for input/output handles.
+@@ -65,8 +65,14 @@ public class IO
+         this.errorStream = errorStream;
+ 
+         this.in = new InputStreamReader(inputStream);
+-        this.out = new AnsiRenderWriter(outputStream, true);
+-        this.err = new AnsiRenderWriter(errorStream, true);
++
++        //
++        // TODO: Once all user output is in i18n, then it would be more efficent to have the MessageSource
++        //       be ANSI-aware instead of this...
++        //
++
++        this.out = new RenderWriter(outputStream, true);
++        this.err = new RenderWriter(errorStream, true);
+     }
+ 
+     /**
+diff --git a/src/main/org/codehaus/groovy/tools/shell/Main.groovy b/src/main/org/codehaus/groovy/tools/shell/Main.groovy
+index f2ba3fa..909505b 100644
+--- a/src/main/org/codehaus/groovy/tools/shell/Main.groovy
++++ b/src/main/org/codehaus/groovy/tools/shell/Main.groovy
+@@ -17,14 +17,11 @@
+ package org.codehaus.groovy.tools.shell
+ 
+ import org.codehaus.groovy.runtime.InvokerHelper
++import org.codehaus.groovy.tools.shell.util.ANSI
+ import org.codehaus.groovy.tools.shell.util.HelpFormatter
+ import org.codehaus.groovy.tools.shell.util.Logger
+ import org.codehaus.groovy.tools.shell.util.MessageSource
+ import org.codehaus.groovy.tools.shell.util.NoExitSecurityManager
+-import java.util.concurrent.Callable
+-import org.fusesource.jansi.Ansi
+-import org.fusesource.jansi.AnsiConsole
+-import jline.Terminal
+ 
+ /**
+  * Main CLI entry-point for <tt>groovysh</tt>.
+@@ -34,14 +31,6 @@ import jline.Terminal
+  */
+ class Main
+ {
+-    static {
+-        // Install the system adapters
+-        AnsiConsole.systemInstall()
+-
+-        // Register jline ansi detector
+-        Ansi.setDetector(new AnsiDetector())
+-    }
+-
+     private static final MessageSource messages = new MessageSource(Main.class)
+ 
+     static void main(final String[] args) {
+@@ -108,7 +97,7 @@ class Main
+         // Add a hook to display some status when shutting down...
+         addShutdownHook {
+             //
+-            // FIXME: We need to configure JLine to catch CTRL-C for us... Use gshell-io's InputPipe
++            // FIXME: We need to configure JLine to catch CTRL-C for us... if that is possible
+             //
+ 
+             if (code == null) {
+@@ -166,7 +155,7 @@ class Main
+             case 'none':
+                 type = 'jline.UnsupportedTerminal'
+                 // Disable ANSI, for some reason UnsupportedTerminal reports ANSI as enabled, when it shouldn't
+-                Ansi.enabled = false
++                ANSI.enabled = false
+                 break;
+         }
+ 
+@@ -183,7 +172,7 @@ class Main
+             value = Boolean.valueOf(value).booleanValue(); // For JDK 1.4 compat
+         }
+ 
+-        Ansi.enabled = value
++        ANSI.enabled = value
+     }
+ 
+     static void setSystemProperty(final String nameValue) {
+@@ -203,11 +192,3 @@ class Main
+         System.setProperty(name, value)
+     }
+ }
+-
+-class AnsiDetector
+-    implements Callable<Boolean>
+-{
+-    public Boolean call() throws Exception {
+-        return Terminal.getTerminal().isANSISupported()
+-    }
+-}
+diff --git a/src/main/org/codehaus/groovy/tools/shell/util/ANSI.java b/src/main/org/codehaus/groovy/tools/shell/util/ANSI.java
+new file mode 100644
+index 0000000..188f8c3
+--- /dev/null
++++ b/src/main/org/codehaus/groovy/tools/shell/util/ANSI.java
+@@ -0,0 +1,421 @@
++/*
++ * Copyright 2003-2007 the original author or authors.
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package org.codehaus.groovy.tools.shell.util;
++
++import java.lang.reflect.Field;
++import java.lang.reflect.Modifier;
++
++import java.io.OutputStream;
++import java.io.PrintWriter;
++import java.io.Writer;
++
++import java.util.HashMap;
++import java.util.Map;
++
++import jline.ANSIBuffer.ANSICodes;
++import jline.Terminal;
++
++/**
++ * Provides support for using ANSI color escape codes.
++ *
++ * @version $Id: groovy-1.7.2-nojansi.patch,v 1.1 2010/04/20 07:48:11 lkundrak Exp $
++ * @author <a href="mailto:jason@planet57.com">Jason Dillon</a>
++ */
++public class ANSI
++{
++    //
++    // Detection/Enabled Muck
++    //
++
++    /**
++     * Tries to detect if the current system supports ANSI.
++     */
++    private static boolean detect() {
++        boolean enabled = Terminal.getTerminal().isANSISupported();
++
++        if (!enabled) {
++            String force = System.getProperty(ANSI.class.getName() + ".force", "false");
++            enabled = Boolean.valueOf(force).booleanValue();
++        }
++
++        return enabled;
++    }
++
++    public static boolean isDetected() {
++        return detect();
++    }
++
++    private static Boolean enabled;
++
++    public static void setEnabled(final boolean flag) {
++        enabled = Boolean.valueOf(flag);
++    }
++
++    public static boolean isEnabled() {
++        if (enabled == null) {
++            enabled = Boolean.valueOf(isDetected());
++        }
++        
++        return enabled.booleanValue();
++    }
++
++    //
++    // Code
++    //
++
++    public static class Code
++    {
++        //
++        // NOTE: Some fields duplicated from jline.ANSIBuffer.ANSICodes to change access modifiers
++        //
++        
++        public static final int OFF = 0;
++        public static final int BOLD = 1;
++        public static final int UNDERSCORE = 4;
++        public static final int BLINK = 5;
++        public static final int REVERSE = 7;
++        public static final int CONCEALED = 8;
++        
++        public static final int FG_BLACK = 30;
++        public static final int FG_RED = 31;
++        public static final int FG_GREEN = 32;
++        public static final int FG_YELLOW = 33;
++        public static final int FG_BLUE = 34;
++        public static final int FG_MAGENTA = 35;
++        public static final int FG_CYAN = 36;
++        public static final int FG_WHITE = 37;
++
++        public static final int BLACK = FG_BLACK;
++        public static final int RED = FG_RED;
++        public static final int GREEN = FG_GREEN;
++        public static final int YELLOW = FG_YELLOW;
++        public static final int BLUE = FG_BLUE;
++        public static final int MAGENTA = FG_MAGENTA;
++        public static final int CYAN = FG_CYAN;
++        public static final int WHITE = FG_WHITE;
++        
++        public static final int BG_BLACK = 40;
++        public static final int BG_RED = 41;
++        public static final int BG_GREEN = 42;
++        public static final int BG_YELLOW = 43;
++        public static final int BG_BLUE = 44;
++        public static final int BG_MAGENTA = 45;
++        public static final int BG_CYAN = 46;
++        public static final int BG_WHITE = 47;
++
++        /** A map of code names to values. */
++        private static final Map NAMES_TO_CODES;
++
++        /** A map of codes to name. */
++        private static final Map CODES_TO_NAMES;
++
++        static {
++            Field[] fields = Code.class.getDeclaredFields();
++            Map names = new HashMap(fields.length);
++            Map codes = new HashMap(fields.length);
++
++            try {
++                for (int i=0; i<fields.length; i++) {
++                    // Skip anything non-public, all public fields are codes
++                    int mods = fields[i].getModifiers();
++                    if (!Modifier.isPublic(mods)) {
++                        continue;
++                    }
++                    
++                    String name = fields[i].getName();
++                    Number code = (Number) fields[i].get(Code.class);
++                    
++                    names.put(name, code);
++                    codes.put(code, name);
++                }
++            }
++            catch (IllegalAccessException e) {
++                // This should never happen
++                throw new Error(e);
++            }
++
++            NAMES_TO_CODES = names;
++            CODES_TO_NAMES = codes;
++        }
++
++        /**
++         * Returns the ANSI code for the given symbolic name.  Supported symbolic names are all defined as
++         * fields in {@link org.codehaus.groovy.tools.shell.util.ANSI.Code} where the case is not significant.
++         */
++        public static int forName(final String name) throws IllegalArgumentException {
++            assert name != null;
++
++            // All names in the map are upper-case
++            String tmp = name.toUpperCase();
++            Number code = (Number) NAMES_TO_CODES.get(tmp);
++
++            if (code == null) {
++                throw new IllegalArgumentException("Invalid ANSI code name: " + name);
++            }
++
++            return code.intValue();
++        }
++
++        /**
++         * Returns the symbolic name for the given ANSI code.
++         */
++        public static String name(final int code) throws IllegalArgumentException {
++            String name = (String) CODES_TO_NAMES.get(Integer.valueOf(code));
++
++            if (name == null) {
++                throw new IllegalArgumentException("Invalid ANSI code: " + code);
++            }
++
++            return name;
++        }
++    }
++
++    //
++    // Buffer
++    //
++
++    public static class Buffer
++    {
++        private final StringBuffer buff = new StringBuffer();
++
++        public final boolean autoClear = true;
++
++        public String toString() {
++            try {
++                return buff.toString();
++            }
++            finally {
++                if (autoClear) clear();
++            }
++        }
++
++        public void clear() {
++            buff.setLength(0);
++        }
++
++        public int size() {
++            return buff.length();
++        }
++
++        public Buffer append(final String text) {
++            buff.append(text);
++
++            return this;
++        }
++
++        public Buffer append(final Object obj) {
++            return append(String.valueOf(obj));
++        }
++
++        public Buffer attrib(final int code) {
++            if (isEnabled()) {
++                buff.append(ANSICodes.attrib(code));
++            }
++
++            return this;
++        }
++
++        public Buffer attrib(final String text, final int code) {
++            assert text != null;
++
++            if (isEnabled()) {
++                buff.append(ANSICodes.attrib(code)).append(text).append(ANSICodes.attrib(Code.OFF));
++            }
++            else {
++                buff.append(text);
++            }
++            
++            return this;
++        }
++
++        public Buffer attrib(final String text, final String codeName) {
++            return attrib(text, Code.forName(codeName));
++        }
++    }
++
++    //
++    // Renderer
++    //
++
++    public static class Renderer
++    {
++        public static final String BEGIN_TOKEN = "@|";
++
++        private static final int BEGIN_TOKEN_SIZE = BEGIN_TOKEN.length();
++
++        public static final String END_TOKEN = "|@";
++
++        private static final int END_TOKEN_SIZE = END_TOKEN.length();
++
++        public static final String CODE_TEXT_SEPARATOR  = " ";
++
++        public static final String CODE_LIST_SEPARATOR  = ",";
++
++        private final Buffer buff = new Buffer();
++
++        public String render(final String input) throws RenderException {
++            assert input != null;
++
++            // current, prefix and suffix positions
++            int c = 0, p, s;
++
++            while (c < input.length()) {
++                p = input.indexOf(BEGIN_TOKEN, c);
++                if (p < 0) { break; }
++
++                s = input.indexOf(END_TOKEN, p + BEGIN_TOKEN_SIZE);
++                if (s < 0) {
++                    throw new RenderException("Missing '" + END_TOKEN + "': " + input);
++                }
++
++                String expr = input.substring(p + BEGIN_TOKEN_SIZE, s);
++
++                buff.append(input.substring(c, p));
++
++                evaluate(expr);
++
++                c = s + END_TOKEN_SIZE;
++            }
++
++            buff.append(input.substring(c));
++
++            return buff.toString();
++        }
++
++        private void evaluate(final String input) throws RenderException {
++            assert input != null;
++
++            int i = input.indexOf(CODE_TEXT_SEPARATOR);
++            if (i < 0) {
++                throw new RenderException("Missing ANSI code/text separator '" + CODE_TEXT_SEPARATOR + "': " + input);
++            }
++
++            String tmp = input.substring(0, i);
++            String[] codes = tmp.split(CODE_LIST_SEPARATOR);
++            String text = input.substring(i + 1, input.length());
++
++            for (int j=0; j<codes.length; j++) {
++                int code = Code.forName(codes[j]);
++                buff.attrib(code);
++            }
++
++            buff.append(text);
++
++            buff.attrib(Code.OFF);
++        }
++
++        //
++        // RenderException
++        //
++
++        public static class RenderException
++            extends RuntimeException
++        {
++            public RenderException(final String msg) {
++                super(msg);
++            }
++        }
++
++        //
++        // Helpers
++        //
++
++        public static boolean test(final String text) {
++            return text != null && text.indexOf(BEGIN_TOKEN) >= 0;
++        }
++
++        public static String encode(final String text, final int code) {
++            return new StringBuffer(BEGIN_TOKEN).
++                    append(Code.name(code)).
++                    append(CODE_TEXT_SEPARATOR).
++                    append(text).
++                    append(END_TOKEN).
++                    toString();
++        }
++    }
++
++    //
++    // RenderWriter
++    //
++
++    public static class RenderWriter
++        extends PrintWriter
++    {
++        private final Renderer renderer = new Renderer();
++
++        public RenderWriter(final OutputStream out) {
++            super(out);
++        }
++
++        public RenderWriter(final OutputStream out, final boolean autoFlush) {
++            super(out, autoFlush);
++        }
++
++        public RenderWriter(final Writer out) {
++            super(out);
++        }
++
++        public RenderWriter(final Writer out, final boolean autoFlush) {
++            super(out, autoFlush);
++        }
++
++        public void write(final String s) {
++            if (Renderer.test(s)) {
++                super.write(renderer.render(s));
++            }
++            else {
++                super.write(s);
++            }
++        }
++    }
++
++    //
++    // RenderMessageSource
++    //
++
++    public static class RenderMessageSource
++        extends MessageSource
++    {
++        private final Renderer renderer = new Renderer();
++
++        public RenderMessageSource(final String[] names) {
++            super(names);
++        }
++
++        public RenderMessageSource(final String name) {
++            super(name);
++        }
++
++        public RenderMessageSource(final Class[] types) {
++            super(types);
++        }
++
++        public RenderMessageSource(final Class type) {
++            super(type);
++        }
++
++        public String getMessage(final String code) {
++            final String msg = super.getMessage(code);
++
++            if (Renderer.test(msg)) {
++                return renderer.render(msg);
++            }
++
++            return msg;
++        }
++    }
++}
+diff --git a/src/main/org/codehaus/groovy/tools/shell/util/Logger.java b/src/main/org/codehaus/groovy/tools/shell/util/Logger.java
+index 1b85099..dd62fd9 100644
+--- a/src/main/org/codehaus/groovy/tools/shell/util/Logger.java
++++ b/src/main/org/codehaus/groovy/tools/shell/util/Logger.java
+@@ -20,10 +20,6 @@
+ 
+ import java.io.IOException;
+ 
+-import static org.fusesource.jansi.Ansi.ansi;
+-import static org.fusesource.jansi.Ansi.Color;
+-import static org.fusesource.jansi.Ansi.Color.*;
+-import static org.fusesource.jansi.Ansi.Attribute.*;
+ 
+ /**
+  * Provides a very, very basic logging API.
+@@ -56,12 +52,21 @@
+             }
+         }
+ 
+-        Color color = GREEN;
++		StringBuffer buff = new StringBuffer();
++        
++        int color = ANSI.Code.BOLD;
+         if (WARN.equals(level) || ERROR.equals(level)) {
+-            color = RED;
++            color = ANSI.Code.RED;
+         }
+ 
+-        io.out.println(ansi().a(INTENSITY_BOLD).a(color).a(level).reset().a(" [").a(name).a("] ").a(msg));
++        buff.append(ANSI.Renderer.encode(level, color));
++
++        buff.append(" [");
++        buff.append(name);
++        buff.append("] ");
++        buff.append(msg);
++
++        io.out.println(buff);
+ 
+         if (cause != null) {
+             cause.printStackTrace(io.out);
+-- 
+1.7.1
+
