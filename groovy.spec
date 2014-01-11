@@ -1,20 +1,29 @@
+%{?_javapackages_macros:%_javapackages_macros}
 # Note to packagers: When rebasing this to a later version, do not
 # forget to ensure that sources 1 and 2 are up to date as well as
 # the Requires list.
 
 Name:           groovy
-Version:        1.8.0
-Release:        4
+Version:        1.8.9
+Release:        5.1%{?dist}
 Summary:        Dynamic language for the Java Platform
 
-Group:          Development/Java
-License:        ASL 2.0
+
+# Some of the files are licensed under BSD and CPL terms, but the CPL has been superceded
+# by the EPL. We include copies of both for completeness.
+# groovyConsole uses CC-BY licensed icons
+# (see: subprojects/groovy-console/target/tmp/groovydoc/groovy/ui/icons/credits.txt)
+License:        ASL 2.0 and BSD and EPL and Public Domain and CC-BY
 URL:            http://groovy.codehaus.org/
 Source0:        http://dist.groovy.codehaus.org/distributions/%{name}-src-%{version}.zip
 Source1:        groovy-script
 Source2:        groovy-starter.conf
 Source3:        groovy.desktop
-Patch1:         groovy-1.8.0-nojansi.patch
+Source4:        cpl-v10.txt
+Source5:        epl-v10.txt
+Source6:        http://www.apache.org/licenses/LICENSE-2.0.txt
+# http://jira.codehaus.org/browse/GROOVY-6085
+Patch0:         groovy-inner-interface-annotations.patch
 BuildArch:      noarch
 
 BuildRequires:  ant
@@ -23,16 +32,18 @@ BuildRequires:  ant-antlr
 BuildRequires:  objectweb-asm
 BuildRequires:  bsf
 BuildRequires:  apache-ivy
+BuildRequires:  jansi
 BuildRequires:  jline
-BuildRequires:  jsp21
+BuildRequires:  tomcat-jsp-2.2-api
 BuildRequires:  junit
-BuildRequires:  servlet25
+BuildRequires:  tomcat-servlet-3.0-api
 BuildRequires:  xstream
 BuildRequires:  java-devel >= 1.6
 BuildRequires:  desktop-file-utils
 BuildRequires:  jpackage-utils
 BuildRequires:  apache-commons-cli
 BuildRequires:  unzip
+BuildRequires:  ecj
 Requires:       jpackage-utils
 
 # The are all runtime dependencies of the script
@@ -44,11 +55,12 @@ Requires:       objectweb-asm
 Requires:       bsf
 Requires:       apache-commons-cli
 Requires:       apache-commons-logging
-Requires:       ivy
+Requires:       apache-ivy
+Requires:       jansi
 Requires:       jline
-Requires:       jsp21
+Requires:       tomcat-jsp-2.2-api
 Requires:       junit
-Requires:       servlet25
+Requires:       tomcat-servlet-3.0-api
 Requires:       xstream
 
 
@@ -62,7 +74,7 @@ you can use Java.
 
 %package javadoc
 Summary:        API Documentation for %{name}
-Group:          Development/Java
+
 Requires:       %{name} = %{version}-%{release}
 Requires:       jpackage-utils
 %description javadoc
@@ -71,25 +83,29 @@ JavaDoc documentation for %{name}
 
 %prep
 %setup -q
-%patch1 -p1 -b .jansi
+cp %{SOURCE4} %{SOURCE5} %{SOURCE6} .
+# Remove bundled JARs and classes
+find \( -name *.jar -o -name *.class \) -delete
 
+%patch0 -p1
 
 %build
 mkdir -p target/lib/{compile,tools}
 
 # Construct classpath
-export CLASSPATH=""
-CLASSPATH=$CLASSPATH:$(build-classpath servlet jsp \
-        objectweb-asm/asm-tree objectweb-asm/asm \
-        objectweb-asm/asm-util objectweb-asm/asm-analysis \
-        antlr ant/ant-antlr antlr \
-        bsf jline xstream ant junit ivy commons-cli)
-
 build-jar-repository target/lib/compile servlet jsp \
         objectweb-asm/asm-tree objectweb-asm/asm \
         objectweb-asm/asm-util objectweb-asm/asm-analysis \
         antlr ant/ant-antlr antlr \
-        bsf jline xstream ant junit ivy commons-cli
+        bsf jline xstream ant junit ivy commons-cli \
+        jansi
+
+# Use ECJ instead of OpenJDK to compile MethodHandle.  This is a
+# workaround for a bug in OpenJDK that causes compilation of
+# MethodHandle to take many minutes (15min or even more), while ECJ
+# can compile it under five seconds.  See rhbz#971483 and
+# http://mail.openjdk.java.net/pipermail/compiler-dev/2013-May/006339.html
+ecj -d target/classes `find -name MethodHandle.java -o -name ArrayUtil.java`
 
 # Build
 # TODO: Build at least tests, maybe examples
@@ -126,17 +142,14 @@ desktop-file-install --dir $RPM_BUILD_ROOT%{_datadir}/applications \
         %{SOURCE3}
 
 # API Documentation
-install -d $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
+install -d $RPM_BUILD_ROOT%{_javadocdir}/%{name}
 find target -type d |xargs chmod 755
-cp -rp target/html/api/. $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
+cp -rp target/html/api/. $RPM_BUILD_ROOT%{_javadocdir}/%{name}
 
 # Maven depmap
-install -d $RPM_BUILD_ROOT%{_datadir}/maven2/poms
-install -p -m644 pom.xml $RPM_BUILD_ROOT/%{_datadir}/maven2/poms/JPP-%{name}.pom
-%add_to_maven_depmap org.codehaus.groovy %{name} %{version} JPP %{name}
-
-
-
+install -d $RPM_BUILD_ROOT%{_mavenpomdir}
+install -p -m644 pom.xml $RPM_BUILD_ROOT/%{_mavenpomdir}/JPP-%{name}.pom
+%add_maven_depmap JPP-%{name}.pom %{name}.jar
 
 %files
 %defattr(-,root,root,-)
@@ -147,19 +160,131 @@ install -p -m644 pom.xml $RPM_BUILD_ROOT/%{_datadir}/maven2/poms/JPP-%{name}.pom
 %{_mavendepmapfragdir}/*
 %{_mavenpomdir}/*
 %config(noreplace) %{_sysconfdir}/*
-%doc LICENSE.txt NOTICE.txt README.txt 
+%doc README.md
+%doc LICENSE.txt LICENSE-2.0.txt NOTICE.txt cpl-v10.txt epl-v10.txt
 
 
 %files javadoc
-%defattr(-,root,root,-)
 %{_javadocdir}/*
+%doc LICENSE.txt LICENSE-2.0.txt NOTICE.txt cpl-v10.txt epl-v10.txt
 
+%changelog
+* Sat Aug 18 2013 Matt Spaulding <mspaulding06@gmail.com> - 1.8.9-5
+- Fix setting classpath (RHBZ#982378)
 
-%post
-%update_maven_depmap
+* Sat Aug 03 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.8.9-4
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
 
+* Mon Jun 10 2013 Michal Srb <msrb@redhat.com> - 1.8.9-3
+- Fix license tag (+CC-BY)
 
-%postun
-%update_maven_depmap
+* Thu Jun  6 2013 Mikolaj Izdebski <mizdebsk@redhat.com> - 1.8.9-2
+- Remove bundled JARs and classes
+- Add workaround for rhbz#971483
+- Add Public Domain to licenses
+- Install ASL 2.0 license text, resolves: rhbz#858257
 
+* Sat Apr 20 2013 gil cattaneo <puntogil@libero.it> - 1.8.9-1
+- Update to 1.8.9
 
+* Thu Apr 11 2013 Matt Spaulding <mspaulding06@gmail.com> - 1.8.8-4
+- Now accepts classpath argument (RHBZ #810885)
+
+* Mon Apr  8 2013 Andy Grimm <agrimm@gmail.com> - 1.8.8-3
+- Apply patch for GROOVY-6085 (RHBZ #949352) 
+
+* Thu Feb 14 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.8.8-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_19_Mass_Rebuild
+
+* Tue Nov 27 2012 Tom Callaway <spot@fedoraproject.org> - 1.8.8-1
+- Update to 1.8.8
+- Fix licensing issues
+
+* Wed Jul 25 2012 Johannes Lips <hannes@fedoraproject.org> - 1.8.7-1
+- Update to 1.8.7
+
+* Thu Jul 19 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.8.6-5
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_18_Mass_Rebuild
+
+* Wed Mar 21 2012 Alexander Kurtakov <akurtako@redhat.com> 1.8.6-4
+- Move to tomcat v7 apis.
+- Guideline fixes.
+
+* Fri Mar 09 2012 Johannes Lips <hannes@fedoraproject.org> - 1.8.6-3
+- fixed the path of jvm in the startup script 
+
+* Sat Mar 03 2012 Johannes Lips <hannes@fedoraproject.org> - 1.8.6-2
+- fixed the startup script by adding jansi as dep
+
+* Wed Feb 22 2012 Johannes Lips <hannes@fedoraproject.org> - 1.8.6-1
+- Update to 1.8.6
+
+* Tue Jan 03 2012 Johannes Lips <hannes@fedoraproject.org> - 1.8.5-1
+- Update to 1.8.5
+
+* Sun Nov 20 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.4-1
+- Update to 1.8.4
+
+* Thu Oct 13 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.3-2
+- remove the nojansi patch since jansi is in fedora
+
+* Thu Oct 13 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.3-1
+- Update to 1.8.3
+
+* Tue Sep 06 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.2-1
+- Update to 1.8.2
+
+* Sat Aug 13 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.1-3
+- adjusted the maven pom dir
+
+* Sat Aug 13 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.1-2
+- updated the nojansi patch
+
+* Sat Aug 13 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.1-1
+- Update to 1.8.1
+
+* Wed May 04 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.0-2
+- Minor changes to reflect changes to packaging guidelines
+
+* Fri Apr 29 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.0-1
+- Update to 1.8.0
+
+* Wed Feb 09 2011 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.7.7-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_15_Mass_Rebuild
+
+* Sat Nov 6 2010 Alexander Kurtakov <akurtako@redhat.com> 1.7.2-3
+- Build with servlet and jsp apis from tomcat6.
+
+* Thu Jun 17 2010 Lubomir Rintel <lkundrak@v3.sk> - 1.7.2-2
+- Fix a typo
+
+* Tue Apr 20 2010 Lubomir Rintel <lkundrak@v3.sk> - 1.7.2-1
+- Bump version
+
+* Fri Apr 02 2010 Lubomir Rintel <lkundrak@v3.sk> - 1.7.1-1
+- Bump version
+- Revert addition of jansi dependency
+
+* Fri Apr 02 2010 Lubomir Rintel <lkundrak@v3.sk> - 1.7.0-2
+- Add maven depmap
+
+* Wed Feb 17 2010 Lubomir Rintel <lkundrak@v3.sk> - 1.7.0-1
+- New upstream version
+- Use asm 3.1 instead of asm2
+
+* Wed Dec 04 2009 Lubomir Rintel <lkundrak@v3.sk> - 1.6.7-1
+- New upstream version
+- Make Jochen happy
+
+* Thu Dec 03 2009 Lubomir Rintel <lkundrak@v3.sk> - 1.6.6-2
+- Build with OpenJDK
+
+* Mon Nov 30 2009 Lubomir Rintel <lkundrak@v3.sk> - 1.6.6-1
+- Bump to 1.6.6
+- Don't mistakenly require itself (Jochen Schmitt, #534168#c3)
+
+* Fri Nov 27 2009 Lubomir Rintel <lkundrak@v3.sk> - 1.6.5-2
+- Hopefully fix mockbuild
+
+* Mon Nov 09 2009 Lubomir Rintel <lkundrak@v3.sk> - 1.6.5-1
+- Initial Fedora packaging
