@@ -5,7 +5,7 @@
 
 Name:           groovy
 Version:        1.8.9
-Release:        5.1%{?dist}
+Release:        5.2%{?dist}
 Summary:        Dynamic language for the Java Platform
 
 
@@ -24,6 +24,7 @@ Source5:        epl-v10.txt
 Source6:        http://www.apache.org/licenses/LICENSE-2.0.txt
 # http://jira.codehaus.org/browse/GROOVY-6085
 Patch0:         groovy-inner-interface-annotations.patch
+Patch1:		groovy-build-with-java8.patch
 BuildArch:      noarch
 
 BuildRequires:  ant
@@ -87,7 +88,7 @@ cp %{SOURCE4} %{SOURCE5} %{SOURCE6} .
 # Remove bundled JARs and classes
 find \( -name *.jar -o -name *.class \) -delete
 
-%patch0 -p1
+%apply_patches
 
 %build
 mkdir -p target/lib/{compile,tools}
