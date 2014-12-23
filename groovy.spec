@@ -5,9 +5,9 @@
 
 Name:           groovy
 Version:        1.8.9
-Release:        5.2%{?dist}
+Release:        5.3
 Summary:        Dynamic language for the Java Platform
-
+Group:		Development/Java
 
 # Some of the files are licensed under BSD and CPL terms, but the CPL has been superceded
 # by the EPL. We include copies of both for completeness.
@@ -30,7 +30,7 @@ BuildArch:      noarch
 BuildRequires:  ant
 BuildRequires:  antlr-tool
 BuildRequires:  ant-antlr
-BuildRequires:  objectweb-asm
+BuildRequires:  objectweb-asm3
 BuildRequires:  bsf
 BuildRequires:  apache-ivy
 BuildRequires:  jansi
@@ -52,7 +52,7 @@ Requires:       jpackage-utils
 Requires:       ant
 Requires:       ant-junit
 Requires:       antlr-tool
-Requires:       objectweb-asm
+Requires:       objectweb-asm3
 Requires:       bsf
 Requires:       apache-commons-cli
 Requires:       apache-commons-logging
@@ -95,18 +95,11 @@ mkdir -p target/lib/{compile,tools}
 
 # Construct classpath
 build-jar-repository target/lib/compile servlet jsp \
-        objectweb-asm/asm-tree objectweb-asm/asm \
-        objectweb-asm/asm-util objectweb-asm/asm-analysis \
+        objectweb-asm3/asm-tree objectweb-asm3/asm \
+        objectweb-asm3/asm-util objectweb-asm3/asm-analysis \
         antlr ant/ant-antlr antlr \
         bsf jline xstream ant junit ivy commons-cli \
         jansi
-
-# Use ECJ instead of OpenJDK to compile MethodHandle.  This is a
-# workaround for a bug in OpenJDK that causes compilation of
-# MethodHandle to take many minutes (15min or even more), while ECJ
-# can compile it under five seconds.  See rhbz#971483 and
-# http://mail.openjdk.java.net/pipermail/compiler-dev/2013-May/006339.html
-ecj -d target/classes `find -name MethodHandle.java -o -name ArrayUtil.java`
 
 # Build
 # TODO: Build at least tests, maybe examples
@@ -150,16 +143,14 @@ cp -rp target/html/api/. $RPM_BUILD_ROOT%{_javadocdir}/%{name}
 # Maven depmap
 install -d $RPM_BUILD_ROOT%{_mavenpomdir}
 install -p -m644 pom.xml $RPM_BUILD_ROOT/%{_mavenpomdir}/JPP-%{name}.pom
-%add_maven_depmap JPP-%{name}.pom %{name}.jar
+%add_maven_depmap
 
-%files
+%files -f .mfiles
 %defattr(-,root,root,-)
 %{_bindir}/*
 %{_javadir}/*
 %{_datadir}/pixmaps/*
 %{_datadir}/applications/*
-%{_mavendepmapfragdir}/*
-%{_mavenpomdir}/*
 %config(noreplace) %{_sysconfdir}/*
 %doc README.md
 %doc LICENSE.txt LICENSE-2.0.txt NOTICE.txt cpl-v10.txt epl-v10.txt
