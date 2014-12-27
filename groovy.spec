@@ -5,7 +5,7 @@
 
 Name:           groovy
 Version:        1.8.9
-Release:        5.3
+Release:        6.1
 Summary:        Dynamic language for the Java Platform
 Group:		Development/Java
 
@@ -34,7 +34,7 @@ BuildRequires:  objectweb-asm3
 BuildRequires:  bsf
 BuildRequires:  apache-ivy
 BuildRequires:  jansi
-BuildRequires:  jline
+BuildRequires:  jline1
 BuildRequires:  tomcat-jsp-2.2-api
 BuildRequires:  junit
 BuildRequires:  tomcat-servlet-3.0-api
@@ -58,7 +58,7 @@ Requires:       apache-commons-cli
 Requires:       apache-commons-logging
 Requires:       apache-ivy
 Requires:       jansi
-Requires:       jline
+Requires:       jline1
 Requires:       tomcat-jsp-2.2-api
 Requires:       junit
 Requires:       tomcat-servlet-3.0-api
@@ -98,7 +98,7 @@ build-jar-repository target/lib/compile servlet jsp \
         objectweb-asm3/asm-tree objectweb-asm3/asm \
         objectweb-asm3/asm-util objectweb-asm3/asm-analysis \
         antlr ant/ant-antlr antlr \
-        bsf jline xstream ant junit ivy commons-cli \
+        bsf jline1 xstream ant junit ivy commons-cli \
         jansi
 
 # Build
