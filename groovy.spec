@@ -23,7 +23,7 @@ Source4:        cpl-v10.txt
 Source5:        epl-v10.txt
 Source6:        http://www.apache.org/licenses/LICENSE-2.0.txt
 # http://jira.codehaus.org/browse/GROOVY-6085
-Patch0:         groovy-inner-interface-annotations.patch
+#Patch0:         groovy-inner-interface-annotations.patch
 Patch1:		groovy-build-with-java8.patch
 BuildArch:      noarch
 
