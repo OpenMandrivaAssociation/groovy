@@ -24,7 +24,7 @@ Source5:        epl-v10.txt
 Source6:        http://www.apache.org/licenses/LICENSE-2.0.txt
 # http://jira.codehaus.org/browse/GROOVY-6085
 #Patch0:         groovy-inner-interface-annotations.patch
-Patch1:		groovy-build-with-java8.patch
+#Patch1:		groovy-build-with-java8.patch
 BuildArch:      noarch
 
 BuildRequires:  ant
@@ -88,7 +88,7 @@ cp %{SOURCE4} %{SOURCE5} %{SOURCE6} .
 # Remove bundled JARs and classes
 find \( -name *.jar -o -name *.class \) -delete
 
-%apply_patches
+#%apply_patches
 
 %build
 mkdir -p target/lib/{compile,tools}
