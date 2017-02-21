@@ -5,7 +5,7 @@
 
 Name:           groovy
 Version:        1.8.9
-Release:        6.3
+Release:        6.4
 Summary:        Dynamic language for the Java Platform
 Group:		Development/Java
 
