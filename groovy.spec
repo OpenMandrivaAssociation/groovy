@@ -55,7 +55,7 @@ BuildRequires:  ant
 BuildRequires:  antlr-tool
 BuildRequires:  ant-antlr
 BuildRequires:  aqute-bnd
-BuildRequires:  gpars
+#BuildRequires:  gpars
 BuildRequires:  multiverse
 BuildRequires:  apache-parent
 BuildRequires:  testng
