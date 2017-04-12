@@ -55,7 +55,7 @@ BuildRequires:  ant
 BuildRequires:  antlr-tool
 BuildRequires:  ant-antlr
 BuildRequires:  aqute-bnd
-#BuildRequires:  gpars
+BuildRequires:  gpars
 BuildRequires:  multiverse
 BuildRequires:  apache-parent
 BuildRequires:  testng
@@ -240,10 +240,7 @@ find \( -name *.jar -o -name *.class \) -delete
 
 %build
 #%gradle_build -f -G distBin -- -x groovydoc -x javadoc
-gradle build distBin -x distSrc -x test -Dfile.encoding=UTF-8 -s
-#mv target/libs/groovy-%{version}.jar target/libs/groovy-all-%{version}-indy.jar
-#gradle build  -x groovydoc -x javadoc -x test -Dfile.encoding=UTF-8 --offline
-#gradle -x docs:distBin --offline -s install -Pgradle_installPath=$PWD/inst -PfinalRelease
+gradle build distBin -x distSrc -x test -x examples -Dfile.encoding=UTF-8 -s
 
 %install
 %mvn_artifact %{SOURCE6}   target/libs/groovy-all-%{version}-indy.jar
