@@ -23,7 +23,7 @@ Source5:        epl-v10.txt
 Source6:        https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-all/%{version}/groovy-all-%{version}.pom
 
 Patch0:         0001-Port-to-Servlet-API-3.1.patch
-Patch1:         0002-Gradle-local-mode.tmp.patch
+Patch1:         0002-Gradle-local-mode.patch
 Patch2:         0003-Bintray.patch
 Patch3:         0004-Remove-android-support.patch
 Patch4:         0005-Update-to-QDox-2.0.patch
@@ -211,7 +211,7 @@ cp %{SOURCE4} %{SOURCE5} .
 find \( -name *.jar -o -name *.class \) -delete
 
 %patch0 -p1
-%patch1 -p1 -b.orig
+%patch1 -p1
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
@@ -221,7 +221,7 @@ find \( -name *.jar -o -name *.class \) -delete
 
 %build
 #%gradle_build -f -G distBin -- -x groovydoc -x javadoc
-gradle build distBin -x distSrc -x test -x examples -x docGDK -Dfile.encoding=UTF-8 --offline -s
+gradle build distBin install -x distSrc -x test -x examples -x docGDK -Dfile.encoding=UTF-8 --offline -s
 
 %install
 %mvn_artifact target/poms/pom-all.xml target/libs/groovy-all-%{version}-indy.jar
@@ -242,7 +242,8 @@ gradle build distBin -x distSrc -x test -x examples -x docGDK -Dfile.encoding=UT
 %mvn_artifact subprojects/groovy-templates/target/poms/pom-default.xml subprojects/groovy-templates/target/libs/groovy-templates-%{version}.jar
 %mvn_artifact subprojects/groovy-test/target/poms/pom-default.xml subprojects/groovy-test/target/libs/groovy-test-%{version}.jar
 %mvn_artifact subprojects/groovy-testng/target/poms/pom-default.xml subprojects/groovy-testng/target/libs/groovy-testng-%{version}.jar
-%mvn_artifact subprojects/groovy-xml/target/poms/pom-default.xml subprojects/groovy-xml/target/libs/groovy-xml-%{version}.jar%mvn_install
+%mvn_artifact subprojects/groovy-xml/target/poms/pom-default.xml subprojects/groovy-xml/target/libs/groovy-xml-%{version}.jar
+%mvn_install
 cat .mfiles-all .mfiles > .mfiles-groovy
 
 unzip target/distributions/apache-groovy-binary-%{version}.zip
