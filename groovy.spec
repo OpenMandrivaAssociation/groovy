@@ -221,7 +221,7 @@ find \( -name *.jar -o -name *.class \) -delete
 
 %build
 #%gradle_build -f -G distBin -- -x groovydoc -x javadoc
-gradle build distBin -x distSrc -x test -x examples -Dfile.encoding=UTF-8 --offline -s
+gradle build distBin -x distSrc -x test -x examples -x docGDK -Dfile.encoding=UTF-8 --offline -s
 
 %install
 %mvn_artifact target/poms/pom-all.xml target/libs/groovy-all-%{version}-indy.jar
