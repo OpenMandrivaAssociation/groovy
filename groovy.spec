@@ -5,7 +5,7 @@
 
 Name:           groovy
 Version:        2.4.8
-Release:        0 #2%{?dist}
+Release:        2%{?dist}
 Summary:        Dynamic language for the Java Platform
 
 # Some of the files are licensed under BSD and CPL terms, but the CPL has been superceded
@@ -22,25 +22,6 @@ Source4:        cpl-v10.txt
 Source5:        epl-v10.txt
 Source6:        https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-all/%{version}/groovy-all-%{version}.pom
 
-Source100:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy/%{version}/groovy-%{version}.pom
-Source101:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-ant/%{version}/groovy-ant-%{version}.pom
-Source102:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-bsf/%{version}/groovy-bsf-%{version}.pom
-Source103:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-console/%{version}/groovy-console-%{version}.pom
-Source104:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-docgenerator/%{version}/groovy-docgenerator-%{version}.pom
-Source105:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-groovydoc/%{version}/groovy-groovydoc-%{version}.pom
-Source106:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-groovysh/%{version}/groovy-groovysh-%{version}.pom
-Source107:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-jmx/%{version}/groovy-jmx-%{version}.pom
-Source108:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-json/%{version}/groovy-json-%{version}.pom
-Source109:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-jsr223/%{version}/groovy-jsr223-%{version}.pom
-Source110:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-nio/%{version}/groovy-nio-%{version}.pom
-Source111:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-servlet/%{version}/groovy-servlet-%{version}.pom
-Source112:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-sql/%{version}/groovy-sql-%{version}.pom
-Source113:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-swing/%{version}/groovy-swing-%{version}.pom
-Source114:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-templates/%{version}/groovy-templates-%{version}.pom
-Source115:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-test/%{version}/groovy-test-%{version}.pom
-Source116:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-testng/%{version}/groovy-testng-%{version}.pom
-Source117:      https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-xml/%{version}/groovy-xml-%{version}.pom
-
 Patch0:         0001-Port-to-Servlet-API-3.1.patch
 Patch1:         0002-Gradle-local-mode.tmp.patch
 Patch2:         0003-Bintray.patch
@@ -48,7 +29,7 @@ Patch3:         0004-Remove-android-support.patch
 Patch4:         0005-Update-to-QDox-2.0.patch
 Patch5:         0006-Disable-artifactory-publish.patch
 
-BuildRequires:  gradle #gradle-local >= 2.1-0.9
+BuildRequires:  gradle-local >= 2.1-0.9
 BuildRequires:  javapackages-local
 BuildRequires:  java-devel >= 1.8
 BuildRequires:  ant
@@ -229,40 +210,39 @@ cp %{SOURCE4} %{SOURCE5} .
 # Remove bundled JARs and classes
 find \( -name *.jar -o -name *.class \) -delete
 
-#patch0 -p1
+%patch0 -p1
 %patch1 -p1 -b.orig
 %patch2 -p1
 %patch3 -p1
-#patch4 -p1
+%patch4 -p1
 %patch5 -p1
 
 %mvn_package ':groovy-{*}' @1
 
 %build
 #%gradle_build -f -G distBin -- -x groovydoc -x javadoc
-gradle build distBin -x distSrc -x test -x examples -Dfile.encoding=UTF-8 -s
+gradle build distBin -x distSrc -x test -x examples -Dfile.encoding=UTF-8 --offline -s
 
 %install
-%mvn_artifact %{SOURCE6}   target/libs/groovy-all-%{version}-indy.jar
-%mvn_artifact %{SOURCE100} target/libs/groovy-%{version}.jar
-%mvn_artifact %{SOURCE101} subprojects/groovy-ant/target/libs/groovy-ant-%{version}.jar
-%mvn_artifact %{SOURCE102} subprojects/groovy-bsf/target/libs/groovy-bsf-%{version}.jar
-%mvn_artifact %{SOURCE103} subprojects/groovy-console/target/libs/groovy-console-%{version}.jar
-%mvn_artifact %{SOURCE104} subprojects/groovy-docgenerator/target/libs/groovy-docgenerator-%{version}.jar
-%mvn_artifact %{SOURCE105} subprojects/groovy-groovydoc/target/libs/groovy-groovydoc-%{version}.jar
-%mvn_artifact %{SOURCE106} subprojects/groovy-groovysh/target/libs/groovy-groovysh-%{version}.jar
-%mvn_artifact %{SOURCE107} subprojects/groovy-jmx/target/libs/groovy-jmx-%{version}.jar
-%mvn_artifact %{SOURCE108} subprojects/groovy-json/target/libs/groovy-json-%{version}.jar
-%mvn_artifact %{SOURCE109} subprojects/groovy-jsr223/target/libs/groovy-jsr223-%{version}.jar
-%mvn_artifact %{SOURCE110} subprojects/groovy-nio/target/libs/groovy-nio-%{version}.jar
-%mvn_artifact %{SOURCE111} subprojects/groovy-servlet/target/libs/groovy-servlet-%{version}.jar
-%mvn_artifact %{SOURCE112} subprojects/groovy-sql/target/libs/groovy-sql-%{version}.jar
-%mvn_artifact %{SOURCE113} subprojects/groovy-swing/target/libs/groovy-swing-%{version}.jar
-%mvn_artifact %{SOURCE114} subprojects/groovy-templates/target/libs/groovy-templates-%{version}.jar
-%mvn_artifact %{SOURCE115} subprojects/groovy-test/target/libs/groovy-test-%{version}.jar
-%mvn_artifact %{SOURCE116} subprojects/groovy-testng/target/libs/groovy-testng-%{version}.jar
-%mvn_artifact %{SOURCE117} subprojects/groovy-xml/target/libs/groovy-xml-%{version}.jar
-%mvn_install
+%mvn_artifact target/poms/pom-all.xml target/libs/groovy-all-%{version}-indy.jar
+%mvn_artifact target/poms/pom-groovy.xml target/libs/groovy-%{version}.jar
+%mvn_artifact subprojects/groovy-ant/target/poms/pom-default.xml subprojects/groovy-ant/target/libs/groovy-ant-%{version}.jar
+%mvn_artifact subprojects/groovy-bsf/target/poms/pom-default.xml subprojects/groovy-bsf/target/libs/groovy-bsf-%{version}.jar
+%mvn_artifact subprojects/groovy-console/target/poms/pom-default.xml subprojects/groovy-console/target/libs/groovy-console-%{version}.jar
+%mvn_artifact subprojects/groovy-docgenerator/target/poms/pom-default.xml subprojects/groovy-docgenerator/target/libs/groovy-docgenerator-%{version}.jar
+%mvn_artifact subprojects/groovy-groovydoc/target/poms/pom-default.xml subprojects/groovy-groovydoc/target/libs/groovy-groovydoc-%{version}.jar
+%mvn_artifact subprojects/groovy-groovysh/target/poms/pom-default.xml subprojects/groovy-groovysh/target/libs/groovy-groovysh-%{version}.jar
+%mvn_artifact subprojects/groovy-jmx/target/poms/pom-default.xml subprojects/groovy-jmx/target/libs/groovy-jmx-%{version}.jar
+%mvn_artifact subprojects/groovy-json/target/poms/pom-default.xml subprojects/groovy-json/target/libs/groovy-json-%{version}.jar
+%mvn_artifact subprojects/groovy-jsr223/target/poms/pom-default.xml subprojects/groovy-jsr223/target/libs/groovy-jsr223-%{version}.jar
+%mvn_artifact subprojects/groovy-nio/target/poms/pom-default.xml subprojects/groovy-nio/target/libs/groovy-nio-%{version}.jar
+%mvn_artifact subprojects/groovy-servlet/target/poms/pom-default.xml subprojects/groovy-servlet/target/libs/groovy-servlet-%{version}.jar
+%mvn_artifact subprojects/groovy-sql/target/poms/pom-default.xml subprojects/groovy-sql/target/libs/groovy-sql-%{version}.jar
+%mvn_artifact subprojects/groovy-swing/target/poms/pom-default.xml subprojects/groovy-swing/target/libs/groovy-swing-%{version}.jar
+%mvn_artifact subprojects/groovy-templates/target/poms/pom-default.xml subprojects/groovy-templates/target/libs/groovy-templates-%{version}.jar
+%mvn_artifact subprojects/groovy-test/target/poms/pom-default.xml subprojects/groovy-test/target/libs/groovy-test-%{version}.jar
+%mvn_artifact subprojects/groovy-testng/target/poms/pom-default.xml subprojects/groovy-testng/target/libs/groovy-testng-%{version}.jar
+%mvn_artifact subprojects/groovy-xml/target/poms/pom-default.xml subprojects/groovy-xml/target/libs/groovy-xml-%{version}.jar%mvn_install
 cat .mfiles-all .mfiles > .mfiles-groovy
 
 unzip target/distributions/apache-groovy-binary-%{version}.zip
