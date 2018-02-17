@@ -225,7 +225,9 @@ find \( -name *.jar -o -name *.class \) -delete
 %build
 # When groovy is built, the whole build is executed twice - without and with indy
 # Supplying -x jarAllWithIndy -Pindy=true makes it compile with indy only
-%gradle_build -f -G distBin -- -x groovydoc -x javadoc -x jarAllWithIndy -Pindy=true
+#%%gradle_build -f -G distBin -- -x groovydoc -x javadoc -x jarAllWithIndy -Pindy=true
+gradle build distBin install -x groovydoc -x javadoc -x jarAllWithIndy -Pindy=true -x distSrc -x test -x examples -x docGDK -Dfile.encoding=UTF-8 --offline -s
+
 
 %install
 %pom_xpath_remove '*[local-name()="classifier"]' .xmvn-reactor
