@@ -1,11 +1,13 @@
 %{?_javapackages_macros:%_javapackages_macros}
+
 # Note to packagers: When rebasing this to a later version, do not
 # forget to ensure that sources 1 and 2 are up to date as well as
 # the Requires list.
 
 Name:           groovy
 Version:        2.4.8
-Release:        2%{?dist}
+Release:        4%{?dist}.1
+Group:          Development/Java
 Summary:        Dynamic language for the Java Platform
 
 # Some of the files are licensed under BSD and CPL terms, but the CPL has been superceded
@@ -20,7 +22,7 @@ Source1:        groovy-script.sh
 Source3:        groovy.desktop
 Source4:        cpl-v10.txt
 Source5:        epl-v10.txt
-Source6:        https://repo1.maven.org/maven2/org/codehaus/groovy/groovy-all/%{version}/groovy-all-%{version}.pom
+Source6:        https://central.maven.org/maven2/org/codehaus/groovy/groovy-all/%{version}/groovy-all-%{version}.pom
 
 Patch0:         0001-Port-to-Servlet-API-3.1.patch
 Patch1:         0002-Gradle-local-mode.patch
@@ -28,6 +30,7 @@ Patch2:         0003-Bintray.patch
 Patch3:         0004-Remove-android-support.patch
 Patch4:         0005-Update-to-QDox-2.0.patch
 Patch5:         0006-Disable-artifactory-publish.patch
+
 
 BuildRequires:  gradle-local >= 2.1-0.9
 BuildRequires:  javapackages-local
@@ -220,33 +223,16 @@ find \( -name *.jar -o -name *.class \) -delete
 %mvn_package ':groovy-{*}' @1
 
 %build
-#%gradle_build -f -G distBin -- -x groovydoc -x javadoc
-gradle build distBin install -x distSrc -x test -x examples -x docGDK -Dfile.encoding=UTF-8 --offline -s
+# When groovy is built, the whole build is executed twice - without and with indy
+# Supplying -x jarAllWithIndy -Pindy=true makes it compile with indy only
+%gradle_build -f -G distBin -- -x groovydoc -x javadoc -x jarAllWithIndy -Pindy=true
 
 %install
-%mvn_artifact target/poms/pom-all.xml target/libs/groovy-all-%{version}-indy.jar
-%mvn_artifact target/poms/pom-groovy.xml target/libs/groovy-%{version}.jar
-%mvn_artifact subprojects/groovy-ant/target/poms/pom-default.xml subprojects/groovy-ant/target/libs/groovy-ant-%{version}.jar
-%mvn_artifact subprojects/groovy-bsf/target/poms/pom-default.xml subprojects/groovy-bsf/target/libs/groovy-bsf-%{version}.jar
-%mvn_artifact subprojects/groovy-console/target/poms/pom-default.xml subprojects/groovy-console/target/libs/groovy-console-%{version}.jar
-%mvn_artifact subprojects/groovy-docgenerator/target/poms/pom-default.xml subprojects/groovy-docgenerator/target/libs/groovy-docgenerator-%{version}.jar
-%mvn_artifact subprojects/groovy-groovydoc/target/poms/pom-default.xml subprojects/groovy-groovydoc/target/libs/groovy-groovydoc-%{version}.jar
-%mvn_artifact subprojects/groovy-groovysh/target/poms/pom-default.xml subprojects/groovy-groovysh/target/libs/groovy-groovysh-%{version}.jar
-%mvn_artifact subprojects/groovy-jmx/target/poms/pom-default.xml subprojects/groovy-jmx/target/libs/groovy-jmx-%{version}.jar
-%mvn_artifact subprojects/groovy-json/target/poms/pom-default.xml subprojects/groovy-json/target/libs/groovy-json-%{version}.jar
-%mvn_artifact subprojects/groovy-jsr223/target/poms/pom-default.xml subprojects/groovy-jsr223/target/libs/groovy-jsr223-%{version}.jar
-%mvn_artifact subprojects/groovy-nio/target/poms/pom-default.xml subprojects/groovy-nio/target/libs/groovy-nio-%{version}.jar
-%mvn_artifact subprojects/groovy-servlet/target/poms/pom-default.xml subprojects/groovy-servlet/target/libs/groovy-servlet-%{version}.jar
-%mvn_artifact subprojects/groovy-sql/target/poms/pom-default.xml subprojects/groovy-sql/target/libs/groovy-sql-%{version}.jar
-%mvn_artifact subprojects/groovy-swing/target/poms/pom-default.xml subprojects/groovy-swing/target/libs/groovy-swing-%{version}.jar
-%mvn_artifact subprojects/groovy-templates/target/poms/pom-default.xml subprojects/groovy-templates/target/libs/groovy-templates-%{version}.jar
-%mvn_artifact subprojects/groovy-test/target/poms/pom-default.xml subprojects/groovy-test/target/libs/groovy-test-%{version}.jar
-%mvn_artifact subprojects/groovy-testng/target/poms/pom-default.xml subprojects/groovy-testng/target/libs/groovy-testng-%{version}.jar
-%mvn_artifact subprojects/groovy-xml/target/poms/pom-default.xml subprojects/groovy-xml/target/libs/groovy-xml-%{version}.jar
+%pom_xpath_remove '*[local-name()="classifier"]' .xmvn-reactor
+%mvn_artifact %{SOURCE6} target/libs/groovy-all-%{version}-indy.jar
 %mvn_install
-cat .mfiles-all .mfiles > .mfiles-groovy
 
-unzip target/distributions/apache-groovy-binary-%{version}.zip
+unzip -o target/distributions/apache-groovy-binary-%{version}.zip
 rm -rf groovy-%{version}/{*LICENSE.txt,NOTICE.txt,bin/*.bat,META-INF}
 install -d -m 755 %{buildroot}%{_datadir}/
 cp -a groovy-%{version} %{buildroot}%{_datadir}/%{name}
@@ -361,7 +347,7 @@ EOF
 %{_datadir}/applications/*
 %config(noreplace) %{_sysconfdir}/*
 
-%files lib -f .mfiles-groovy
+%files lib -f .mfiles -f .mfiles-all
 %doc LICENSE NOTICE README.adoc
 %files ant -f .mfiles-ant
 %files bsf -f .mfiles-bsf
@@ -382,6 +368,12 @@ EOF
 %files xml -f .mfiles-xml
 
 %changelog
+* Mon Oct 09 2017 Michael Simacek <msimacek@redhat.com> - 2.4.8-4
+- Fix build with new gradle
+
+* Wed Jul 26 2017 Fedora Release Engineering <releng@fedoraproject.org> - 2.4.8-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Mass_Rebuild
+
 * Fri Feb 10 2017 Fedora Release Engineering <releng@fedoraproject.org> - 2.4.8-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_26_Mass_Rebuild
 
@@ -545,7 +537,7 @@ EOF
 - Now accepts classpath argument (RHBZ #810885)
 
 * Mon Apr  8 2013 Andy Grimm <agrimm@gmail.com> - 1.8.8-3
-- Apply patch for GROOVY-6085 (RHBZ #949352) 
+- Apply patch for GROOVY-6085 (RHBZ #949352)
 
 * Thu Feb 14 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.8.8-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_19_Mass_Rebuild
@@ -565,7 +557,7 @@ EOF
 - Guideline fixes.
 
 * Fri Mar 09 2012 Johannes Lips <hannes@fedoraproject.org> - 1.8.6-3
-- fixed the path of jvm in the startup script 
+- fixed the path of jvm in the startup script
 
 * Sat Mar 03 2012 Johannes Lips <hannes@fedoraproject.org> - 1.8.6-2
 - fixed the startup script by adding jansi as dep
