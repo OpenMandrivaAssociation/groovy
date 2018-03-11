@@ -1,2 +1,24 @@
 sources:
-  groovy-src-1.8.9.zip: 34b1b3dd61aa0319ced53dbef0ea3e85386de401
+  "groovy-xml-2.4.8.pom":   35fdddea2033198cad10b6e3fff008374797366a
+  "epl-v10.txt":   b0b5680fa9c5388f6ab3d8f36e737e901793843e
+  "groovy-test-2.4.8.pom":   98c626f925e778934409875c0401308ad9654b09
+  "groovy-groovysh-2.4.8.pom":   4c477e484419f54cdb0afd9da051c95a4da124fc
+  "groovy-ant-2.4.8.pom":   2252ca3b2486d1c6b3d4a714ca7a4691ad4b3cb0
+  "groovy-bsf-2.4.8.pom":   8c8eab5103a28298b147113c4b91c2496f0d1872
+  "groovy-2.4.8.pom":   cdab3e6aa0cf2db16c47ec800ebbb8f367731b95
+  "groovy-groovydoc-2.4.8.pom":   a78559cb678298c5e04107d2742c674b00a31084
+  "groovy.desktop":   734b9186a38b294d85167ea6679c507258ffa1e1
+  "cpl-v10.txt":   c94b6cf4503c6ecf2457a98fcd9c007e1f22daad
+  "groovy-json-2.4.8.pom":   e93dbe7c24af8022bbee3e596375cdd1c190ab96
+  "groovy-jmx-2.4.8.pom":   e7db2dc05dc246e426e21f6651b3a758c9ae7464
+  "groovy-docgenerator-2.4.8.pom":   c353ad0ab1fe580ff2db2bdeea139eff35323b56
+  "groovy-sql-2.4.8.pom":   86821554e38c422d9eb0a4d934d279a59d7eec2e
+  "groovy-nio-2.4.8.pom":   1741daa36da94506ba3d1fbf510fba3edb9b1a57
+  "groovy-jsr223-2.4.8.pom":   66d86146d04743e0c345b3b5ccd804a264e40fe5
+  "groovy-testng-2.4.8.pom":   53a76790b5445b2ad0fdf657cacd255b71077aec
+  "groovy-script.sh":   63e4e66ac8debc22415e2b826bb640ad0ac94d38
+  "groovy-all-2.4.8.pom":   e8543f7769b8b074b79ae62bc258f74f6880fcaf
+  "groovy-servlet-2.4.8.pom":   6c6d993187c770a12c296486e8ece2b9c5e8b53e
+  "groovy-swing-2.4.8.pom":   faecdf214496c500161b8d5064e8b51df683f51a
+  "groovy-templates-2.4.8.pom":   9f2b81c4697dc8e8562f35210bebe404c404ee68
+  "groovy-console-2.4.8.pom":   b3ca798cffc54a700c2980ae412c7941e904c2cb

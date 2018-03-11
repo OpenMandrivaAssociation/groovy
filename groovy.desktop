@@ -1,8 +1,11 @@
 [Desktop Entry]
 Version=1.0
 Name=Groovy Console
-GenericName=Groovy Console
-Comment=Evaluate scripts in Groovy language
+Name[ru]=Консоль Groovy
+GenericName=Evaluate scripts in Groovy language
+GenericName[ru]=Оценка, отладка скриптов на языке Groovy
+Comment=The Groovy Console allows a user to enter and run Groovy scripts
+Comment[ru]=Консоль Groovy позволяет пользователю войти и запустить скрипты на языке Groovy
 Type=Application
 Categories=Development;IDE;Java;
 Exec=groovyConsole %F
