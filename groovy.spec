@@ -15,7 +15,7 @@ Summary:        Dynamic language for the Java Platform
 # groovyConsole uses CC-BY licensed icons
 # (see: subprojects/groovy-console/target/tmp/groovydoc/groovy/ui/icons/credits.txt)
 License:        ASL 2.0 and BSD and EPL and Public Domain and CC-BY
-URL:            http://groovy-lang.org
+URL:            https://groovy-lang.org
 
 Source0:        https://dl.bintray.com/groovy/maven/apache-groovy-src-%{version}.zip
 Source1:        groovy-script.sh
