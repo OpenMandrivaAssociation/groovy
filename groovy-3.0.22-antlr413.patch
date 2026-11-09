@@ -1,0 +1,191 @@
+diff -ru ca/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/AstBuilder.java cb/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/AstBuilder.java
+--- ca/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/AstBuilder.java	2026-11-09 19:06:31.258462199 +0100
++++ cb/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/AstBuilder.java	2026-11-09 19:06:31.263611197 +0100
+@@ -22,6 +22,7 @@
+ import groovy.lang.Tuple3;
+ import groovy.transform.Trait;
+ import org.antlr.v4.runtime.ANTLRErrorListener;
++import org.antlr.v4.runtime.BaseErrorListener;
+ import org.antlr.v4.runtime.CharStream;
+ import org.antlr.v4.runtime.CharStreams;
+ import org.antlr.v4.runtime.CommonTokenStream;
+@@ -4306,9 +4307,9 @@
+     }
+ 
+     private ANTLRErrorListener createANTLRErrorListener() {
+-        return new ANTLRErrorListener() {
++        return new BaseErrorListener() {
+             @Override
+-            public void syntaxError(final Recognizer recognizer, final Object offendingSymbol, final int line, final int charPositionInLine, final String msg, final RecognitionException e) {
++            public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e) {
+                 collectSyntaxError(new SyntaxException(msg, line, charPositionInLine + 1));
+             }
+         };
+diff -ru ca/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/GroovyLangLexer.java cb/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/GroovyLangLexer.java
+--- ca/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/GroovyLangLexer.java	2026-11-09 19:06:31.283982372 +0100
++++ cb/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/GroovyLangLexer.java	2026-11-09 19:06:31.291244649 +0100
+@@ -24,6 +24,8 @@
+ import org.antlr.v4.runtime.LexerNoViableAltException;
+ import org.antlr.v4.runtime.atn.ATN;
+ import org.antlr.v4.runtime.atn.LexerATNSimulator;
++import org.antlr.v4.runtime.atn.PredictionContextCache;
++import org.antlr.v4.runtime.dfa.DFA;
+ import org.apache.groovy.parser.antlr4.internal.atnmanager.LexerAtnManager;
+ 
+ import java.io.IOException;
+@@ -40,7 +42,13 @@
+     public GroovyLangLexer(CharStream input) {
+         super(input);
+ 
+-        this.setInterpreter(new PositionAdjustingLexerATNSimulator(this, LexerAtnManager.INSTANCE.getATN()));
++        // Pass the generated lexer's DFA from this subclass. The simulator is a
++        // static nested class, so it cannot see GroovyLexer's protected fields.
++        this.setInterpreter(new PositionAdjustingLexerATNSimulator(this, LexerAtnManager.INSTANCE.getATN(), _decisionToDFA, _sharedContextCache));
++    }
++
++    public static void clearCachedDFA() {
++        new LexerATNSimulator(_ATN, _decisionToDFA, _sharedContextCache).clearDFA();
+     }
+ 
+     @Override
+@@ -54,8 +62,8 @@
+     }
+ 
+     private static class PositionAdjustingLexerATNSimulator extends LexerATNSimulator {
+-        public PositionAdjustingLexerATNSimulator(Lexer recog, ATN atn) {
+-            super(recog, atn);
++        public PositionAdjustingLexerATNSimulator(Lexer recog, ATN atn, DFA[] decisionToDFA, PredictionContextCache sharedContextCache) {
++            super(recog, atn, decisionToDFA, sharedContextCache);
+         }
+ 
+         protected void resetAcceptPosition(CharStream input, int index, int line, int charPositionInLine) {
+diff -ru ca/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/GroovyLangParser.java cb/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/GroovyLangParser.java
+--- ca/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/GroovyLangParser.java	2026-11-09 19:06:31.310541914 +0100
++++ cb/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/GroovyLangParser.java	2026-11-09 19:06:31.316548278 +0100
+@@ -19,8 +19,6 @@
+ 
+ package org.apache.groovy.parser.antlr4;
+ 
+-import org.antlr.v4.runtime.FailedPredicateException;
+-import org.antlr.v4.runtime.Parser;
+ import org.antlr.v4.runtime.TokenStream;
+ import org.antlr.v4.runtime.atn.ParserATNSimulator;
+ import org.apache.groovy.parser.antlr4.internal.atnmanager.ParserAtnManager;
+@@ -34,29 +32,16 @@
+ 
+     public GroovyLangParser(TokenStream input) {
+         super(input);
+-
+-        this.setInterpreter(new ParserATNSimulator(this, ParserAtnManager.INSTANCE.getATN()));
++        // The generated constructor already shares _decisionToDFA. Clearing
++        // it is what keeps a long-lived process from retaining every DFA.
++        ParserAtnManager.INSTANCE.getATN();
+ 
+         if (GROOVY_PARSER_PROFILING_ENABLED) {
+             this.setProfile(true);
+         }
+     }
+ 
+-    @Override
+-    protected FailedPredicateException createFailedPredicateException(String predicate, String message) {
+-        return new LightWeightFailedPredicateException(this, predicate, message);
+-    }
+-
+-    private static class LightWeightFailedPredicateException extends FailedPredicateException {
+-        LightWeightFailedPredicateException(Parser recognizer, String predicate, String message) {
+-            super(recognizer, predicate, message);
+-        }
+-
+-        @Override
+-        public final Throwable fillInStackTrace() {
+-            // `FailedPredicateException` is used to change the control flow,
+-            // so its stack trace can be eliminated for better performance
+-            return this;
+-        }
++    public static void clearCachedDFA() {
++        new ParserATNSimulator(_ATN, _decisionToDFA, _sharedContextCache).clearDFA();
+     }
+ }
+diff -ru ca/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/internal/DescriptiveErrorStrategy.java cb/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/internal/DescriptiveErrorStrategy.java
+--- ca/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/internal/DescriptiveErrorStrategy.java	2026-11-09 19:06:31.336246550 +0100
++++ cb/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/internal/DescriptiveErrorStrategy.java	2026-11-09 19:06:31.340648693 +0100
+@@ -89,18 +89,18 @@
+     protected void reportNoViableAlternative(Parser recognizer,
+                                              NoViableAltException e) {
+ 
+-        notifyErrorListeners(recognizer, this.createNoViableAlternativeErrorMessage(recognizer, e), e);
++        recognizer.notifyErrorListeners(e.getOffendingToken(), this.createNoViableAlternativeErrorMessage(recognizer, e), e);
+     }
+ 
+     protected String createInputMismatchErrorMessage(Parser recognizer,
+                                                      InputMismatchException e) {
+-        return "Unexpected input: " + getTokenErrorDisplay(e.getOffendingToken(recognizer));
++        return "Unexpected input: " + getTokenErrorDisplay(e.getOffendingToken());
+     }
+ 
+     protected void reportInputMismatch(Parser recognizer,
+                                        InputMismatchException e) {
+ 
+-        notifyErrorListeners(recognizer, this.createInputMismatchErrorMessage(recognizer, e), e);
++        recognizer.notifyErrorListeners(e.getOffendingToken(), this.createInputMismatchErrorMessage(recognizer, e), e);
+     }
+ 
+ 
+@@ -111,6 +111,6 @@
+ 
+     protected void reportFailedPredicate(Parser recognizer,
+                                          FailedPredicateException e) {
+-        notifyErrorListeners(recognizer, this.createFailedPredicateErrorMessage(recognizer, e), e);
++        recognizer.notifyErrorListeners(e.getOffendingToken(), this.createFailedPredicateErrorMessage(recognizer, e), e);
+     }
+ }
+diff -ru ca/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/internal/atnmanager/AtnManager.java cb/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/internal/atnmanager/AtnManager.java
+--- ca/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/internal/atnmanager/AtnManager.java	2026-11-09 19:06:31.360547729 +0100
++++ cb/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/internal/atnmanager/AtnManager.java	2026-11-09 19:06:31.365166457 +0100
+@@ -48,6 +48,9 @@
+ 
+     protected abstract boolean shouldClearDfaCache();
+ 
++    /** Drop the shared DFA. ANTLR 4.13 keeps that cache off the ATN. */
++    protected abstract void clearDfaCache();
++
+     protected class AtnWrapper {
+         private final ATN atn;
+         private final AtomicLong counter = new AtomicLong(0);
+@@ -67,7 +70,7 @@
+ 
+             WRITE_LOCK.lock();
+             try {
+-                atn.clearDFA();
++                clearDfaCache();
+             } finally {
+                 WRITE_LOCK.unlock();
+             }
+diff -ru ca/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/internal/atnmanager/LexerAtnManager.java cb/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/internal/atnmanager/LexerAtnManager.java
+--- ca/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/internal/atnmanager/LexerAtnManager.java	2026-11-09 19:06:31.379494318 +0100
++++ cb/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/internal/atnmanager/LexerAtnManager.java	2026-11-09 19:06:31.382189029 +0100
+@@ -45,5 +45,10 @@
+         return TO_CLEAR_LEXER_DFA_CACHE;
+     }
+ 
++    @Override
++    protected void clearDfaCache() {
++        GroovyLangLexer.clearCachedDFA();
++    }
++
+     private LexerAtnManager() {}
+ }
+diff -ru ca/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/internal/atnmanager/ParserAtnManager.java cb/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/internal/atnmanager/ParserAtnManager.java
+--- ca/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/internal/atnmanager/ParserAtnManager.java	2026-11-09 19:06:31.393560335 +0100
++++ cb/subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4/internal/atnmanager/ParserAtnManager.java	2026-11-09 19:06:31.396302836 +0100
+@@ -38,5 +38,10 @@
+         return true;
+     }
+ 
++    @Override
++    protected void clearDfaCache() {
++        GroovyLangParser.clearCachedDFA();
++    }
++
+     private ParserAtnManager() {}
+ }

@@ -1,638 +1,411 @@
-%{?_javapackages_macros:%_javapackages_macros}
+Name:		groovy
+Version:	3.0.22
+Release:	1
+Summary:	Agile and dynamic language for the Java platform
+Group:		Development/Java
+# Console icons under groovy/ui/icons are the famfamfam Silk set (CC-BY).
+License:	ASL 2.0 and CC-BY
+URL:		https://groovy-lang.org/
+# Tag GROOVY_3_0_22. The gradle-wrapper jar and a test-resources jar are
+# removed from this archive; nothing here is a prebuilt class file.
+Source0:	https://github.com/apache/groovy/archive/refs/tags/GROOVY_3_0_22.tar.gz#/groovy-%{version}.tar.gz
+# Parrot parser against antlr4-runtime 4.13: clearDfaCache, BaseErrorListener,
+# notifyErrorListeners(Token, String, RecognitionException). AstBuilder keeps
+# calling the shared context getter (type(), expression(), primary(), ...).
+Patch0:		groovy-3.0.22-antlr413.patch
+# javax.swing.JApplet is gone from this JDK. Drop the applet entry points.
+# void run() still opens the frame console. CST inspect still extends TestRig.
+Patch1:		groovy-3.0.22-jdk27-console.patch
 
-# Note to packagers: When rebasing this to a later version, do not
-# forget to ensure that sources 1 and 2 are up to date as well as
-# the Requires list.
-
-Name:           groovy
-Version:        2.4.8
-Release:        4%{?dist}.1
-Group:          Development/Java
-Summary:        Dynamic language for the Java Platform
-
-# Some of the files are licensed under BSD and CPL terms, but the CPL has been superceded
-# by the EPL. We include copies of both for completeness.
-# groovyConsole uses CC-BY licensed icons
-# (see: subprojects/groovy-console/target/tmp/groovydoc/groovy/ui/icons/credits.txt)
-License:        ASL 2.0 and BSD and EPL and Public Domain and CC-BY
-URL:            https://groovy-lang.org
-
-Source0:        https://dl.bintray.com/groovy/maven/apache-groovy-src-%{version}.zip
-Source1:        groovy-script.sh
-Source3:        groovy.desktop
-Source4:        cpl-v10.txt
-Source5:        epl-v10.txt
-Source6:        https://central.maven.org/maven2/org/codehaus/groovy/groovy-all/%{version}/groovy-all-%{version}.pom
-
-Patch0:         0001-Port-to-Servlet-API-3.1.patch
-Patch1:         0002-Gradle-local-mode.patch
-Patch2:         0003-Bintray.patch
-Patch3:         0004-Remove-android-support.patch
-Patch4:         0005-Update-to-QDox-2.0.patch
-Patch5:         0006-Disable-artifactory-publish.patch
-
-
-BuildRequires:  gradle-local >= 2.1-0.9
-BuildRequires:  javapackages-local
-BuildRequires:  java-devel >= 1.8
-BuildRequires:  ant
-BuildRequires:  antlr-tool
-BuildRequires:  ant-antlr
-BuildRequires:  aqute-bnd
-BuildRequires:  gpars
-BuildRequires:  multiverse
-BuildRequires:  apache-parent
-BuildRequires:  testng
-BuildRequires:  jline
-BuildRequires:  apache-commons-cli
-BuildRequires:  apache-commons-beanutils
-BuildRequires:  apache-commons-collections
-BuildRequires:  checkstyle
-BuildRequires:  jarjar
-BuildRequires:  glassfish-jsp-api
-BuildRequires:  glassfish-servlet-api
-BuildRequires:  objectweb-asm3
-BuildRequires:  bsf
-BuildRequires:  apache-ivy
-BuildRequires:  jansi
-BuildRequires:  junit
-BuildRequires:  xstream
-BuildRequires:  desktop-file-utils
-BuildRequires:  unzip
-BuildRequires:  qdox
-BuildRequires:  mvn(org.apache.ant:ant-junit)
-BuildRequires:  mvn(org.apache.ant:ant-launcher)
-BuildRequires:  mvn(javax.servlet:servlet-api)
-BuildRequires:  mvn(javax.servlet:jsp-api)
-
-Requires:       %{name}-lib = %{version}-%{release}
-Requires:       %{name}-ant = %{version}-%{release}
-Requires:       %{name}-bsf = %{version}-%{release}
-Requires:       %{name}-console = %{version}-%{release}
-Requires:       %{name}-docgenerator = %{version}-%{release}
-Requires:       %{name}-groovydoc = %{version}-%{release}
-Requires:       %{name}-groovysh = %{version}-%{release}
-Requires:       %{name}-jmx = %{version}-%{release}
-Requires:       %{name}-json = %{version}-%{release}
-Requires:       %{name}-jsr223 = %{version}-%{release}
-Requires:       %{name}-nio = %{version}-%{release}
-Requires:       %{name}-servlet = %{version}-%{release}
-Requires:       %{name}-sql = %{version}-%{release}
-Requires:       %{name}-swing = %{version}-%{release}
-Requires:       %{name}-templates = %{version}-%{release}
-Requires:       %{name}-test = %{version}-%{release}
-Requires:       %{name}-testng = %{version}-%{release}
-Requires:       %{name}-xml = %{version}-%{release}
-
-# optional in pom.xml, but present in upstream binary tarball
-Requires:       xpp3-minimal
-
-BuildArch:      noarch
+BuildArch:	noarch
+BuildRequires:	java-current-devel
+BuildRequires:	sysjar
+# 4.13.2-2 names context getters after the referenced rule. 4.13.2-4
+# follows the shared name, lets a List getter win, and ships TestRig.
+BuildRequires:	antlr4-tool >= 4.13.2-4
+BuildRequires:	mvn(antlr:antlr)
+BuildRequires:	mvn(org.antlr:antlr4-runtime)
+BuildRequires:	mvn(org.ow2.asm:asm)
+BuildRequires:	mvn(org.ow2.asm:asm-analysis)
+BuildRequires:	mvn(org.ow2.asm:asm-commons)
+BuildRequires:	mvn(org.ow2.asm:asm-tree)
+BuildRequires:	mvn(org.ow2.asm:asm-util)
+BuildRequires:	mvn(info.picocli:picocli)
+BuildRequires:	mvn(com.thoughtworks.xstream:xstream)
+BuildRequires:	mvn(org.apache.ivy:ivy)
+BuildRequires:	mvn(org.fusesource.jansi:jansi)
+BuildRequires:	mvn(junit:junit)
+BuildRequires:	mvn(com.github.javaparser:javaparser-core)
+BuildRequires:	mvn(org.apache.ant:ant)
+BuildRequires:	mvn(org.apache.ant:ant-launcher)
+BuildRequires:	mvn(org.abego.treelayout:org.abego.treelayout.core)
 
 %description
-Groovy is an agile and dynamic language for the Java Virtual Machine,
-built upon Java with features inspired by languages like Python, Ruby and
-Smalltalk.  It seamlessly integrates with all existing Java objects and
-libraries and compiles straight to Java bytecode so you can use it anywhere
-you can use Java.
-
-
-%package lib
-Summary:        Groovy JAR artifact
-Obsoletes:      %{name}-javadoc < 2
-
-%description lib
-This package contains Groovy JAR artifact.
-
-%package ant
-Summary:        ant module for %{name}
-
-%description ant
-ant module for %{name}.
-
-%package bsf
-Summary:        bsf module for %{name}
-
-%description bsf
-bsf module for %{name}.
-
-%package console
-Summary:        console module for %{name}
-
-%description console
-console module for %{name}.
-
-%package docgenerator
-Summary:        docgenerator module for %{name}
-
-%description docgenerator
-docgenerator module for %{name}.
-
-%package groovydoc
-Summary:        groovydoc module for %{name}
-
-%description groovydoc
-groovydoc module for %{name}.
-
-%package groovysh
-Summary:        groovysh module for %{name}
-
-%description groovysh
-groovysh module for %{name}.
-
-%package jmx
-Summary:        jmx module for %{name}
-
-%description jmx
-jmx module for %{name}.
-
-%package json
-Summary:        json module for %{name}
-
-%description json
-json module for %{name}.
-
-%package jsr223
-Summary:        jsr223 module for %{name}
-
-%description jsr223
-jsr223 module for %{name}.
-
-%package nio
-Summary:        nio module for %{name}
-
-%description nio
-nio module for %{name}.
-
-%package servlet
-Summary:        servlet module for %{name}
-
-%description servlet
-servlet module for %{name}.
-
-%package sql
-Summary:        sql module for %{name}
-
-%description sql
-sql module for %{name}.
-
-%package swing
-Summary:        swing module for %{name}
-
-%description swing
-swing module for %{name}.
-
-%package templates
-Summary:        templates module for %{name}
-
-%description templates
-templates module for %{name}.
-
-%package test
-Summary:        test module for %{name}
-
-%description test
-test module for %{name}.
-
-%package testng
-Summary:        testng module for %{name}
-
-%description testng
-testng module for %{name}.
-
-%package xml
-Summary:        xml module for %{name}
-
-%description xml
-xml module for %{name}.
-
+Groovy compiles to Java bytecode and calls Java libraries directly.
+Gradle 8.11.1's default distribution (bundleGroovy4 off) APIs thirteen
+org.codehaus.groovy 3.0.22 modules: groovy, groovy-ant, groovy-astbuilder,
+groovy-console, groovy-datetime, groovy-dateutil, groovy-groovydoc,
+groovy-json, groovy-nio, groovy-sql, groovy-templates, groovy-test and
+groovy-xml. This package also ships groovy-swing, which the console
+module links. ASM, ANTLR and picocli stay separate system jars.
 
 %prep
-%setup -q
-cp %{SOURCE4} %{SOURCE5} .
-# Remove bundled JARs and classes
-find \( -name *.jar -o -name *.class \) -delete
-
-%patch0 -p1
-%patch1 -p1
-%patch2 -p1
-%patch3 -p1
-%patch4 -p1
-%patch5 -p1
-
-%mvn_package ':groovy-{*}' @1
+%autosetup -n groovy-GROOVY_3_0_22 -p1
+find . -name '*.jar' -delete
 
 %build
-# When groovy is built, the whole build is executed twice - without and with indy
-# Supplying -x jarAllWithIndy -Pindy=true makes it compile with indy only
-#%%gradle_build -f -G distBin -- -x groovydoc -x javadoc -x jarAllWithIndy -Pindy=true
-gradle build distBin install -x groovydoc -x javadoc -x jarAllWithIndy -Pindy=true -x distSrc -x test -x examples -x docGDK -Dfile.encoding=UTF-8 --offline -s
+set -eo pipefail
+export JAVA_HOME=%{_jvmdir}/java-openjdk
+export PATH=$JAVA_HOME/bin:$PATH
 
+WORK=$PWD/work
+rm -rf "$WORK"
+mkdir -p "$WORK/stubs/javax/annotation/concurrent" \
+	"$WORK/stubs/edu/umd/cs/findbugs/annotations" \
+	"$WORK/gen/antlr2/org/codehaus/groovy/antlr/parser" \
+	"$WORK/gen/antlr2/org/codehaus/groovy/antlr/java" \
+	"$WORK/gen/antlr4/org/apache/groovy/parser/antlr4" \
+	"$WORK/classes" "$WORK/dgm/META-INF"
+
+# SOURCE-retention only. Compiled for the compiler, never packed into a jar.
+cat > "$WORK/stubs/javax/annotation/Nullable.java" <<'END'
+package javax.annotation;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+@Retention(RetentionPolicy.SOURCE)
+@Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.TYPE_USE})
+public @interface Nullable {}
+END
+cat > "$WORK/stubs/javax/annotation/concurrent/GuardedBy.java" <<'END'
+package javax.annotation.concurrent;
+import java.lang.annotation.*;
+@Retention(RetentionPolicy.SOURCE)
+public @interface GuardedBy { String value(); }
+END
+cat > "$WORK/stubs/javax/annotation/concurrent/Immutable.java" <<'END'
+package javax.annotation.concurrent;
+import java.lang.annotation.*;
+@Retention(RetentionPolicy.SOURCE)
+public @interface Immutable {}
+END
+cat > "$WORK/stubs/javax/annotation/concurrent/ThreadSafe.java" <<'END'
+package javax.annotation.concurrent;
+import java.lang.annotation.*;
+@Retention(RetentionPolicy.SOURCE)
+public @interface ThreadSafe {}
+END
+cat > "$WORK/stubs/javax/annotation/concurrent/NotThreadSafe.java" <<'END'
+package javax.annotation.concurrent;
+import java.lang.annotation.*;
+@Retention(RetentionPolicy.SOURCE)
+public @interface NotThreadSafe {}
+END
+cat > "$WORK/stubs/edu/umd/cs/findbugs/annotations/SuppressFBWarnings.java" <<'END'
+package edu.umd.cs.findbugs.annotations;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+@Retention(RetentionPolicy.SOURCE)
+@Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.PARAMETER})
+public @interface SuppressFBWarnings {
+    String[] value() default {};
+    String justification() default "";
+}
+END
+find "$WORK/stubs" -name '*.java' > "$WORK/stub-sources.list"
+javac --release 8 -encoding UTF-8 -Xlint:-options -d "$WORK/stub-classes" @"$WORK/stub-sources.list"
+
+# jansi's jar is /usr/lib/java on every cooker arch, not %%{_libdir}.
+JANSI=/usr/lib/java/jansi/jansi.jar
+IVY=%{_javadir}/ivy.jar
+JUNIT=%{_javadir}/junit.jar
+JAVAPARSER=%{_javadir}/javaparser-core.jar
+TREE=%{_javadir}/treelayout/org.abego.treelayout.core.jar
+test -f "$JANSI" -a -f "$IVY" -a -f "$JUNIT" -a -f "$JAVAPARSER" -a -f "$TREE"
+
+BASE_CP="$WORK/stub-classes"
+for j in \
+	%{_javadir}/antlr.jar \
+	%{_javadir}/antlr4-runtime.jar \
+	%{_javadir}/asm.jar \
+	%{_javadir}/asm-analysis.jar \
+	%{_javadir}/asm-commons.jar \
+	%{_javadir}/asm-tree.jar \
+	%{_javadir}/asm-util.jar \
+	%{_javadir}/picocli.jar \
+	%{_javadir}/xstream.jar \
+	"$IVY" \
+	"$JANSI"
+do
+	BASE_CP="$BASE_CP:$j"
+done
+
+java -cp %{_javadir}/antlr.jar antlr.Tool \
+	-o "$WORK/gen/antlr2/org/codehaus/groovy/antlr/parser" \
+	src/main/antlr2/org/codehaus/groovy/antlr/groovy.g
+java -cp %{_javadir}/antlr.jar antlr.Tool \
+	-o "$WORK/gen/antlr2/org/codehaus/groovy/antlr/java" \
+	src/main/antlr2/org/codehaus/groovy/antlr/java/java.g
+
+# GroovyParser.g4 looks for GroovyLexer.tokens beside the grammar.
+(
+	cd src/antlr
+	antlr4 -visitor -no-listener -package org.apache.groovy.parser.antlr4 GroovyLexer.g4
+	antlr4 -visitor -no-listener -package org.apache.groovy.parser.antlr4 GroovyParser.g4
+)
+find src/antlr -maxdepth 1 -name 'Groovy*.java' -exec /bin/mv -f {} "$WORK/gen/antlr4/org/apache/groovy/parser/antlr4/" \;
+rm -f src/antlr/Groovy*.tokens src/antlr/Groovy*.interp
+
+find src/main/java -name '*.java' ! -path '*/vmplugin/v9/*' > "$WORK/core-java.list"
+find "$WORK/gen" -name '*.java' >> "$WORK/core-java.list"
+find subprojects/parser-antlr4/src/main/java -name '*.java' >> "$WORK/core-java.list"
+javac --release 8 -encoding UTF-8 -Xlint:-options -cp "$BASE_CP" -d "$WORK/classes" @"$WORK/core-java.list"
+find src/main/java/org/codehaus/groovy/vmplugin/v9 -name '*.java' > "$WORK/v9.list"
+javac --release 11 -encoding UTF-8 -Xlint:-options -cp "$WORK/classes:$BASE_CP" -d "$WORK/classes" @"$WORK/v9.list"
+/bin/cp -a src/resources/. "$WORK/classes/"
+
+java -cp "$WORK/classes:$BASE_CP" org.codehaus.groovy.tools.DgmConverter --info "$WORK/dgm"
+/bin/cp -a "$WORK/dgm/." "$WORK/classes/"
+
+find src/main/groovy -name '*.groovy' > "$WORK/core-groovy.list"
+GROOVY_CP="$WORK/classes:$BASE_CP"
+java -cp "$GROOVY_CP" org.codehaus.groovy.tools.FileSystemCompiler \
+	--classpath "$GROOVY_CP" -d "$WORK/groovy-classes" @"$WORK/core-groovy.list"
+/bin/cp -a "$WORK/groovy-classes/." "$WORK/classes/"
+
+CORE_CP="$WORK/classes:$BASE_CP"
+mkdir -p "$WORK/mods"
+
+write_descriptor() {
+	out=$1
+	name=$2
+	ext=$3
+	static_ext=$4
+	mkdir -p "$out/META-INF/groovy"
+	cat > "$out/META-INF/groovy/org.codehaus.groovy.runtime.ExtensionModule" <<EOF
+moduleName=${name}
+moduleVersion=%{version}
+extensionClasses=${ext}
+staticExtensionClasses=${static_ext}
+EOF
+}
+
+compile_mod() {
+	name=$1
+	shift
+	extra_cp=$1
+	shift
+	mode=${1:-plain}
+	out=$WORK/mods/$name
+	rm -rf "$out"
+	mkdir -p "$out"
+	jlist=$WORK/$name.java.list
+	glist=$WORK/$name.groovy.list
+	: > "$jlist"
+	: > "$glist"
+	if [ -d "subprojects/$name/src/main/java" ]; then
+		find "subprojects/$name/src/main/java" -name '*.java' >> "$jlist"
+	fi
+	if [ -d "subprojects/$name/src/main/groovy" ]; then
+		find "subprojects/$name/src/main/groovy" -name '*.java' >> "$jlist"
+		find "subprojects/$name/src/main/groovy" -name '*.groovy' >> "$glist"
+	fi
+	cp="$CORE_CP:$extra_cp"
+	if [ "$mode" = joint ]; then
+		# -J-release=8 is passed through as javac --release 8.
+		cat "$jlist" "$glist" > "$WORK/$name.joint.list"
+		java -cp "$cp" org.codehaus.groovy.tools.FileSystemCompiler \
+			--classpath "$cp" -d "$out" -j -J-release=8 -Jencoding=UTF-8 \
+			-FXlint:-options @"$WORK/$name.joint.list"
+	else
+		if [ -s "$jlist" ]; then
+			javac --release 8 -encoding UTF-8 -Xlint:-options -cp "$cp" -d "$out" @"$jlist"
+		fi
+		if [ -s "$glist" ]; then
+			java -cp "$out:$cp" org.codehaus.groovy.tools.FileSystemCompiler \
+				--classpath "$out:$cp" -d "$out" @"$glist"
+		fi
+	fi
+	if [ -d "subprojects/$name/src/main/resources" ]; then
+		/bin/cp -a "subprojects/$name/src/main/resources/." "$out/"
+	fi
+	rm -rf "$out/edu" "$out/javax/annotation"
+	echo "$name $(find "$out" -name '*.class' | wc -l)"
+}
+
+compile_mod groovy-astbuilder ""
+compile_mod groovy-datetime ""
+write_descriptor "$WORK/mods/groovy-datetime" groovy-datetime \
+	org.apache.groovy.datetime.extensions.DateTimeExtensions \
+	org.apache.groovy.datetime.extensions.DateTimeStaticExtensions
+compile_mod groovy-dateutil ""
+write_descriptor "$WORK/mods/groovy-dateutil" groovy-dateutil \
+	org.apache.groovy.dateutil.extensions.DateUtilExtensions \
+	org.apache.groovy.dateutil.extensions.DateUtilStaticExtensions
+compile_mod groovy-nio ""
+write_descriptor "$WORK/mods/groovy-nio" groovy-nio \
+	org.apache.groovy.nio.extensions.NioExtensions ""
+compile_mod groovy-json ""
+compile_mod groovy-sql ""
+write_descriptor "$WORK/mods/groovy-sql" groovy-sql \
+	org.apache.groovy.sql.extensions.SqlExtensions ""
+compile_mod groovy-xml ""
+write_descriptor "$WORK/mods/groovy-xml" groovy-xml \
+	org.apache.groovy.xml.extensions.XmlExtensions ""
+compile_mod groovy-swing ""
+write_descriptor "$WORK/mods/groovy-swing" groovy-swing \
+	org.apache.groovy.swing.extensions.SwingExtensions ""
+compile_mod groovy-templates "$WORK/mods/groovy-xml"
+compile_mod groovy-test "$JUNIT"
+compile_mod groovy-groovydoc "$WORK/mods/groovy-xml:$WORK/mods/groovy-templates:$JAVAPARSER"
+mkdir -p "$WORK/mods/groovy-groovydoc/org/apache/groovy/docgenerator"
+/bin/cp -f subprojects/groovy-docgenerator/src/main/resources/org/apache/groovy/docgenerator/groovy.ico \
+	"$WORK/mods/groovy-groovydoc/org/apache/groovy/docgenerator/groovy.ico"
+compile_mod groovy-ant "$WORK/mods/groovy-groovydoc:%{_javadir}/ant.jar:%{_javadir}/ant-launcher.jar"
+compile_mod groovy-console "$WORK/mods/groovy-xml:$WORK/mods/groovy-swing:$WORK/mods/groovy-templates:%{_javadir}/antlr4-tool.jar:$TREE" joint
+
+jar cf groovy.jar -C "$WORK/classes" .
+for name in groovy-ant groovy-astbuilder groovy-console groovy-datetime groovy-dateutil \
+	groovy-groovydoc groovy-json groovy-nio groovy-sql groovy-swing groovy-templates \
+	groovy-test groovy-xml
+do
+	jar cf "$name.jar" -C "$WORK/mods/$name" .
+done
+
+dep() {
+	echo "    <dependency>"
+	echo "      <groupId>$1</groupId>"
+	echo "      <artifactId>$2</artifactId>"
+	echo "      <version>$3</version>"
+	echo "    </dependency>"
+}
+
+write_pom() {
+	artifact=$1
+	shift
+	{
+		echo '<?xml version="1.0" encoding="UTF-8"?>'
+		echo '<project xmlns="http://maven.apache.org/POM/4.0.0">'
+		echo '  <modelVersion>4.0.0</modelVersion>'
+		echo '  <groupId>org.codehaus.groovy</groupId>'
+		echo "  <artifactId>${artifact}</artifactId>"
+		echo '  <version>%{version}</version>'
+		echo "  <name>${artifact}</name>"
+		echo '  <description>Groovy %{version}, built from source against system libraries.</description>'
+		echo '  <url>https://groovy-lang.org/</url>'
+		echo '  <licenses>'
+		echo '    <license>'
+		echo '      <name>Apache License, Version 2.0</name>'
+		echo '      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>'
+		echo '    </license>'
+		echo '  </licenses>'
+		if [ "$#" -gt 0 ]; then
+			echo '  <dependencies>'
+			while [ "$#" -gt 0 ]; do
+				dep "$1" "$2" "$3"
+				shift 3
+			done
+			echo '  </dependencies>'
+		fi
+		echo '</project>'
+	} > "$artifact.pom"
+}
+
+write_pom groovy \
+	org.ow2.asm asm 9.11.1 \
+	org.ow2.asm asm-analysis 9.11.1 \
+	org.ow2.asm asm-commons 9.11.1 \
+	org.ow2.asm asm-tree 9.11.1 \
+	org.ow2.asm asm-util 9.11.1 \
+	antlr antlr 2.7.7 \
+	org.antlr antlr4-runtime 4.13.2 \
+	info.picocli picocli 4.7.7 \
+	com.thoughtworks.xstream xstream 1.4.21 \
+	org.apache.ivy ivy 2.6.0 \
+	org.fusesource.jansi jansi 2.4.2
+write_pom groovy-ant \
+	org.codehaus.groovy groovy %{version} \
+	org.apache.ant ant 1.10.18 \
+	org.apache.ant ant-launcher 1.10.18 \
+	org.codehaus.groovy groovy-groovydoc %{version}
+write_pom groovy-astbuilder org.codehaus.groovy groovy %{version}
+write_pom groovy-console \
+	org.codehaus.groovy groovy %{version} \
+	org.codehaus.groovy groovy-swing %{version} \
+	org.codehaus.groovy groovy-templates %{version} \
+	org.codehaus.groovy groovy-xml %{version} \
+	org.antlr antlr4 4.13.2 \
+	org.abego.treelayout org.abego.treelayout.core 1.0.3
+write_pom groovy-datetime org.codehaus.groovy groovy %{version}
+write_pom groovy-dateutil org.codehaus.groovy groovy %{version}
+write_pom groovy-groovydoc \
+	org.codehaus.groovy groovy %{version} \
+	org.codehaus.groovy groovy-templates %{version} \
+	org.codehaus.groovy groovy-xml %{version} \
+	com.github.javaparser javaparser-core 3.28.2
+write_pom groovy-json org.codehaus.groovy groovy %{version}
+write_pom groovy-nio org.codehaus.groovy groovy %{version}
+write_pom groovy-sql org.codehaus.groovy groovy %{version}
+write_pom groovy-swing org.codehaus.groovy groovy %{version}
+write_pom groovy-templates \
+	org.codehaus.groovy groovy %{version} \
+	org.codehaus.groovy groovy-xml %{version}
+write_pom groovy-test \
+	org.codehaus.groovy groovy %{version} \
+	junit junit 4.13.2
+write_pom groovy-xml org.codehaus.groovy groovy %{version}
+
+%check
+set -eo pipefail
+export JAVA_HOME=%{_jvmdir}/java-openjdk
+export PATH=$JAVA_HOME/bin:$PATH
+JANSI=/usr/lib/java/jansi/jansi.jar
+CP="%{_javadir}/antlr.jar:%{_javadir}/antlr4-runtime.jar:%{_javadir}/asm.jar:%{_javadir}/asm-analysis.jar:%{_javadir}/asm-commons.jar:%{_javadir}/asm-tree.jar:%{_javadir}/asm-util.jar:%{_javadir}/picocli.jar:%{_javadir}/xstream.jar:%{_javadir}/ivy.jar:$JANSI"
+cat > Smoke.groovy <<'END'
+class Box { int n }
+def b = new Box(n: 40)
+def m = [a: [b: 2]]
+println "groovy_ok ${b.n + m.a.b}"
+END
+test "$(java -cp groovy.jar:$CP groovy.ui.GroovyMain Smoke.groovy)" = "groovy_ok 42"
+cat > XmlSmoke.groovy <<'END'
+def x = new XmlSlurper().parseText('<a>ok</a>')
+println "xml_ok ${x}"
+END
+test "$(java -cp groovy.jar:groovy-xml.jar:$CP groovy.ui.GroovyMain XmlSmoke.groovy)" = "xml_ok ok"
+jar tf groovy.jar | grep -q 'META-INF/dgminfo'
+jar tf groovy-groovydoc.jar | grep -q 'org/apache/groovy/docgenerator/groovy.ico'
+jar tf groovy-json.jar | grep -q 'META-INF/services/org.apache.groovy.json.FastStringServiceFactory'
+for name in groovy-datetime groovy-dateutil groovy-nio groovy-sql groovy-xml groovy-swing; do
+	jar tf "$name.jar" | grep -q 'META-INF/groovy/org.codehaus.groovy.runtime.ExtensionModule'
+done
+for j in groovy.jar groovy-*.jar; do
+	if jar tf "$j" | grep -E '^(edu/umd|javax/annotation)/'; then
+		echo "annotation stub leaked into $j"
+		exit 1
+	fi
+done
 
 %install
-%pom_xpath_remove '*[local-name()="classifier"]' .xmvn-reactor
-%mvn_artifact %{SOURCE6} target/libs/groovy-all-%{version}-indy.jar
-%mvn_install
-
-unzip -o target/distributions/apache-groovy-binary-%{version}.zip
-rm -rf groovy-%{version}/{*LICENSE.txt,NOTICE.txt,bin/*.bat,META-INF}
-install -d -m 755 %{buildroot}%{_datadir}/
-cp -a groovy-%{version} %{buildroot}%{_datadir}/%{name}
-
-for mod in groovy groovy-ant groovy-bsf groovy-console groovy-docgenerator \
-           groovy-groovydoc groovy-groovysh groovy-jmx groovy-json \
-           groovy-jsr223 groovy-nio groovy-servlet groovy-sql groovy-swing \
-           groovy-templates groovy-test groovy-testng groovy-xml; do
-    ln -sf ../../java/%{name}/$mod.jar %{buildroot}%{_datadir}/%{name}/lib/$mod-%{version}.jar
-    ln -sf ../../java/%{name}/$mod.jar %{buildroot}%{_datadir}/%{name}/indy/$mod-%{version}-indy.jar
+# No -u: rpm's install trailer reads DONT_CLEANUP, which is unset.
+set -eo pipefail
+sysjar install --buildroot %{buildroot} \
+	--artifact groovy.pom:groovy.jar \
+	--file-name groovy \
+	--filelist .mfiles
+for name in groovy-ant groovy-astbuilder groovy-console groovy-datetime groovy-dateutil \
+	groovy-groovydoc groovy-json groovy-nio groovy-sql groovy-swing groovy-templates \
+	groovy-test groovy-xml
+do
+	sysjar install --buildroot %{buildroot} \
+		--artifact "$name.pom:$name.jar" \
+		--file-name "$name" \
+		--filelist ".mfiles-$name"
+	grep -v '%%dir /usr/share/sysjar/index/org.codehaus.groovy' ".mfiles-$name" >> .mfiles
 done
 
-ln -sf ../../java/%{name}/groovy-all.jar %{buildroot}%{_datadir}/%{name}/embeddable/groovy-all-%{version}.jar
-ln -sf ../../java/%{name}/groovy-all.jar %{buildroot}%{_datadir}/%{name}/embeddable/groovy-all-%{version}-indy.jar
-
-find %{buildroot}%{_datadir}/%{name}/lib/ ! -name "groovy*" -type f -print -delete
-xmvn-subst %{buildroot}%{_datadir}/%{name}/
-
-# $GROOVY_HOME/lib probably contains much more JARs (optional deps?) than is actually needed.
-# These extra JARs can cause problems, e.g. rhbz#1184269.
-# From that reason, let's symlink needed JARs manually for now.
-ln -sf `build-classpath ant/ant` %{buildroot}%{_datadir}/%{name}/lib/ant.jar
-ln -sf `build-classpath ant/ant-antlr` %{buildroot}%{_datadir}/%{name}/lib/ant-antlr.jar
-ln -sf `build-classpath ant/ant-junit` %{buildroot}%{_datadir}/%{name}/lib/ant-junit.jar
-ln -sf `build-classpath ant/ant-launcher` %{buildroot}%{_datadir}/%{name}/lib/ant-launcher.jar
-ln -sf `build-classpath bsf` %{buildroot}%{_datadir}/%{name}/lib/bsf.jar
-ln -sf `build-classpath commons-cli` %{buildroot}%{_datadir}/%{name}/lib/commons-cli.jar
-ln -sf `build-classpath commons-logging` %{buildroot}%{_datadir}/%{name}/lib/commons-logging.jar
-ln -sf `build-classpath gpars/gpars` %{buildroot}%{_datadir}/%{name}/lib/gpars.jar
-ln -sf `build-classpath hamcrest/core` %{buildroot}%{_datadir}/%{name}/lib/hamcrest-core.jar
-ln -sf `build-classpath apache-ivy/ivy` %{buildroot}%{_datadir}/%{name}/lib/ivy.jar
-ln -sf `build-classpath jansi/jansi` %{buildroot}%{_datadir}/%{name}/lib/jansi.jar
-ln -sf `build-classpath beust-jcommander` %{buildroot}%{_datadir}/%{name}/lib/jcommander.jar
-ln -sf `build-classpath jline/jline` %{buildroot}%{_datadir}/%{name}/lib/jline.jar
-ln -sf `build-classpath glassfish-jsp-api` %{buildroot}%{_datadir}/%{name}/lib/jsp-api.jar
-# part of JDK7+ (?)
-#ln -sf `build-classpath jsr166y` %{buildroot}%{_datadir}/%{name}/lib/jsr166y.jar
-ln -sf `build-classpath junit` %{buildroot}%{_datadir}/%{name}/lib/junit.jar
-ln -sf `build-classpath multiverse/multiverse-core` %{buildroot}%{_datadir}/%{name}/lib/multiverse-core.jar
-# Android support, removed by patch
-#ln -sf `build-classpath openbeans` %{buildroot}%{_datadir}/%{name}/lib/openbeans.jar
-ln -sf `build-classpath qdox` %{buildroot}%{_datadir}/%{name}/lib/qdox.jar
-ln -sf `build-classpath glassfish-servlet-api` %{buildroot}%{_datadir}/%{name}/lib/servlet-api.jar
-ln -sf `build-classpath testng` %{buildroot}%{_datadir}/%{name}/lib/testng.jar
-ln -sf `build-classpath xpp3-minimal` %{buildroot}%{_datadir}/%{name}/lib/xpp3-minimal.jar
-ln -sf `build-classpath xstream/xstream` %{buildroot}%{_datadir}/%{name}/lib/xstream.jar
-# upstream bundles extra166y in gpars
-ln -sf `build-classpath extra166y` %{buildroot}%{_datadir}/%{name}/lib/extra166y.jar
-
-# Startup scripts
-install -d -m 755 %{buildroot}%{_bindir}/
-for cmd in grape groovy groovyc groovyConsole groovydoc groovysh java2groovy; do
-    class=$(awk '/^startGroovy/{print$2}' %{buildroot}%{_datadir}/%{name}/bin/$cmd)
-    install -p -m 755 %{SOURCE1} %{buildroot}%{_bindir}/$cmd
-    sed -i "s/@CLASS@/$class/" %{buildroot}%{_bindir}/$cmd
-    ln -sf %{_bindir}/$cmd %{buildroot}%{_datadir}/%{name}/bin/$cmd
-done
-
-# Configuration
-install -d -m 755 %{buildroot}%{_sysconfdir}/
-mv %{buildroot}%{_datadir}/%{name}/conf/groovy-starter.conf %{buildroot}%{_sysconfdir}/
-ln -s %{_sysconfdir}/groovy-starter.conf %{buildroot}%{_datadir}/%{name}/conf/
-
-# Desktop icon
-install -d %{buildroot}%{_datadir}/pixmaps
-install -d %{buildroot}%{_datadir}/applications
-install -p -m644 subprojects/groovy-console/src/main/resources/groovy/ui/ConsoleIcon.png \
-        %{buildroot}%{_datadir}/pixmaps/groovy.png
-desktop-file-install --dir %{buildroot}%{_datadir}/applications \
-        %{SOURCE3}
-
-# Register as an application to be visible in the software center
-#
-# NOTE: It would be *awesome* if this file was maintained by the upstream
-# project, translated and installed into the right place during `make install`.
-#
-# See http://www.freedesktop.org/software/appstream/docs/ for more details.
-#
-mkdir -p $RPM_BUILD_ROOT%{_datadir}/appdata
-cat > $RPM_BUILD_ROOT%{_datadir}/appdata/%{name}.appdata.xml <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- Copyright 2014 Ryan Lerch <rlerch@redhat.com> -->
-<!--
-SentUpstream: No public bugtracker
--->
-<application>
-  <id type="desktop">groovy.desktop</id>
-  <metadata_license>CC0-1.0</metadata_license>
-  <summary>Interactive console for the Groovy programming language</summary>
-  <description>
-    <p>
-      Groovy is a dynamic programming language that is commonly used as a
-      scripting language for the Java platform. This application provides an
-      interactive console for evaluating scripts in the Groovy language.
-    </p>
-  </description>
-  <url type="homepage">http://groovy-lang.org/</url>
-  <screenshots>
-    <screenshot type="default">https://raw.githubusercontent.com/hughsie/fedora-appstream/master/screenshots-extra/groovy/a.png</screenshot>
-  </screenshots>
-  <!-- FIXME: change this to an upstream email address for spec updates
-  <updatecontact>someone_who_cares@upstream_project.org</updatecontact>
-  -->
-</application>
-EOF
-
-%files
-%{_datadir}/%{name}
-%{_bindir}/*
-%{_datadir}/pixmaps/*
-%{_datadir}/appdata/*.appdata.xml
-%{_datadir}/applications/*
-%config(noreplace) %{_sysconfdir}/*
-
-%files lib -f .mfiles -f .mfiles-all
+%files -f .mfiles
 %doc LICENSE NOTICE README.adoc
-%files ant -f .mfiles-ant
-%files bsf -f .mfiles-bsf
-%files console -f .mfiles-console
-%files docgenerator -f .mfiles-docgenerator
-%files groovydoc -f .mfiles-groovydoc
-%files groovysh -f .mfiles-groovysh
-%files jmx -f .mfiles-jmx
-%files json -f .mfiles-json
-%files jsr223 -f .mfiles-jsr223
-%files nio -f .mfiles-nio
-%files servlet -f .mfiles-servlet
-%files sql -f .mfiles-sql
-%files swing -f .mfiles-swing
-%files templates -f .mfiles-templates
-%files test -f .mfiles-test
-%files testng -f .mfiles-testng
-%files xml -f .mfiles-xml
-
-%changelog
-* Mon Oct 09 2017 Michael Simacek <msimacek@redhat.com> - 2.4.8-4
-- Fix build with new gradle
-
-* Wed Jul 26 2017 Fedora Release Engineering <releng@fedoraproject.org> - 2.4.8-3
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Mass_Rebuild
-
-* Fri Feb 10 2017 Fedora Release Engineering <releng@fedoraproject.org> - 2.4.8-2
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_26_Mass_Rebuild
-
-* Mon Jan 16 2017 Michael Simacek <msimacek@redhat.com> - 2.4.8-1
-- Update to upstream version 2.4.8
-- Resolves: rhbz#1413504 (CVE-2016-6814)
-
-* Mon May 30 2016 Michael Simacek <msimacek@redhat.com> - 2.4.5-9
-- Add missing BR qdox
-
-* Mon Apr 04 2016 Michael Simacek <msimacek@redhat.com> - 2.4.5-8
-- Split into subpackages
-
-* Fri Feb 19 2016 Michal Srb <msrb@redhat.com> - 2.4.5-7
-- Fix a typo
-
-* Fri Feb 19 2016 Michal Srb <msrb@redhat.com> - 2.4.5-6
-- Add missing symlink to extra166y (Resolve: rhbz#1301952)
-- Fix xpp3 symlink (Resolves: rhbz#1299674, thanks to Richard Chan)
-
-* Mon Feb 08 2016 Michal Srb <msrb@redhat.com> - 2.4.5-5
-- Restore symlinks to groovy-all
-
-* Mon Feb 08 2016 Michal Srb <msrb@redhat.com> - 2.4.5-4
-- Install groovy-all with metadata (Resolves: rhbz#1305015)
-
-* Wed Feb 03 2016 Fedora Release Engineering <releng@fedoraproject.org> - 2.4.5-3
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_24_Mass_Rebuild
-
-* Wed Oct 28 2015 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.4.5-2
-- Build with %%gradle_build
-
-* Fri Sep 25 2015 Michal Srb <msrb@redhat.com> - 2.4.5-1
-- Update to upstream release 2.4.5
-
-* Fri Sep 04 2015 Michal Srb <msrb@redhat.com> - 2.4.4-1
-- Update to upstream release 2.4.4
-- Resolves: CVE-2015-3253
-- Fix tarball URL
-
-* Tue Jul 14 2015 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.4.3-5
-- Add suggests on java-devel
-
-* Wed Jun 17 2015 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.4.3-4
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_23_Mass_Rebuild
-
-* Mon May 11 2015 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.4.3-3
-- Fix build script
-
-* Fri Apr 10 2015 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.4.3-2
-- Rebuild to regenerate OSGi metadata
-
-* Fri Apr 10 2015 Michal Srb <msrb@redhat.com> - 2.4.3-1
-- Update to upstream release 2.4.3
-
-* Fri Apr 10 2015 Michal Srb <msrb@redhat.com> - 2.4.2-1
-- Update to upstream release 2.4.2
-
-* Thu Mar 26 2015 Richard Hughes <rhughes@redhat.com> - 2.4.1-3
-- Add an AppData file for the software center
-
-* Thu Mar 26 2015 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.4.1-2
-- Remove build dependency on cobertura
-
-* Mon Mar 16 2015 Michal Srb <msrb@redhat.com> - 2.4.1-1
-- Update to upstream release 2.4.1
-
-* Fri Mar 13 2015 Michal Srb <msrb@redhat.com> - 2.4.0-2
-- Fix URL
-
-* Thu Jan 22 2015 Michal Srb <msrb@redhat.com> - 2.4.0-1
-- Update to 2.4.0
-- Fix java.lang.LinkageError when using @Grab (Resolves: rhbz#1184269)
-
-* Sun Jan  4 2015 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.3.7-2
-- Update desktop file
-
-* Wed Nov 19 2014 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.3.7-1
-- Non-bootstrap build
-
-* Wed Nov 19 2014 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.3.7-0.9
-- Bootstrap build using prebuilt binaries
-
-* Wed Nov 19 2014 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.3.7-0.8
-- Remove javadoc package
-
-* Wed Nov 19 2014 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.3.7-0.7
-- Install launcher scripts
-
-* Wed Nov 19 2014 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.3.7-0.6
-- Install desktop icon
-
-* Wed Nov 19 2014 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.3.7-0.5
-- Port to QDox 2.0
-
-* Sun Nov  9 2014 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.3.7-0.4
-- Use new XMvn resolver factory method
-
-* Tue Nov  4 2014 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.3.7-0.3
-- Install all artifacts and scripts
-
-* Tue Nov  4 2014 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.3.7-0.2
-- Add alias for org.codehaus.groovy:groovy
-
-* Fri Oct 17 2014 Mikolaj Izdebski <mizdebsk@redhat.com> - 2.3.7-0.1
-- Update to upstream version 2.3.7
-
-* Tue Aug 19 2014 Michal Srb <msrb@redhat.com> - 1.8.9-15
-- Introduce groovy-lib subpackage
-- Resolves: rhbz#1098500
-
-* Mon Aug 18 2014 Michal Srb <msrb@redhat.com> - 1.8.9-14
-- Fix Ivy JAR location in wrapper script
-
-* Mon Aug 11 2014 Mikolaj Izdebski <mizdebsk@redhat.com> - 1.8.9-13
-- Fix Ivy JAR location
-
-* Sun Jun 22 2014 Michal Srb - 1.8.9-12
-- Migrate to %%mvn_artifact
-- Fix dep on jline1 in run script
-
-* Mon Jun 16 2014 Michal Srb <msrb@redhat.com> - 1.8.9-11
-- Fix FTBFS
-
-* Sat Jun 07 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.8.9-10
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_21_Mass_Rebuild
-
-* Wed May 21 2014 Mikolaj Izdebski <mizdebsk@redhat.com> - 1.8.9-9
-- Use .mfiles generated during build
-
-* Mon Jan 13 2014 Mikolaj Izdebski <mizdebsk@redhat.com> - 1.8.9-8
-- Add Requires on java-devel
-- Resolves: rhbz#736753
-
-* Fri Dec 06 2013 Michal Srb <msrb@redhat.com> - 1.8.9-7
-- Groovy needs asm3
-
-* Thu Oct 24 2013 Mikolaj Izdebski <mizdebsk@redhat.com> - 1.8.9-6
-- Migrate from jline to jline1
-- Resolves: rhbz#1022969
-
-* Sat Aug 18 2013 Matt Spaulding <mspaulding06@gmail.com> - 1.8.9-5
-- Fix setting classpath (RHBZ#982378)
-
-* Sat Aug 03 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.8.9-4
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
-
-* Mon Jun 10 2013 Michal Srb <msrb@redhat.com> - 1.8.9-3
-- Fix license tag (+CC-BY)
-
-* Thu Jun  6 2013 Mikolaj Izdebski <mizdebsk@redhat.com> - 1.8.9-2
-- Remove bundled JARs and classes
-- Add workaround for rhbz#971483
-- Add Public Domain to licenses
-- Install ASL 2.0 license text, resolves: rhbz#858257
-
-* Sat Apr 20 2013 gil cattaneo <puntogil@libero.it> - 1.8.9-1
-- Update to 1.8.9
-
-* Thu Apr 11 2013 Matt Spaulding <mspaulding06@gmail.com> - 1.8.8-4
-- Now accepts classpath argument (RHBZ #810885)
-
-* Mon Apr  8 2013 Andy Grimm <agrimm@gmail.com> - 1.8.8-3
-- Apply patch for GROOVY-6085 (RHBZ #949352)
-
-* Thu Feb 14 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.8.8-2
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_19_Mass_Rebuild
-
-* Tue Nov 27 2012 Tom Callaway <spot@fedoraproject.org> - 1.8.8-1
-- Update to 1.8.8
-- Fix licensing issues
-
-* Wed Jul 25 2012 Johannes Lips <hannes@fedoraproject.org> - 1.8.7-1
-- Update to 1.8.7
-
-* Thu Jul 19 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.8.6-5
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_18_Mass_Rebuild
-
-* Wed Mar 21 2012 Alexander Kurtakov <akurtako@redhat.com> 1.8.6-4
-- Move to tomcat v7 apis.
-- Guideline fixes.
-
-* Fri Mar 09 2012 Johannes Lips <hannes@fedoraproject.org> - 1.8.6-3
-- fixed the path of jvm in the startup script
-
-* Sat Mar 03 2012 Johannes Lips <hannes@fedoraproject.org> - 1.8.6-2
-- fixed the startup script by adding jansi as dep
-
-* Wed Feb 22 2012 Johannes Lips <hannes@fedoraproject.org> - 1.8.6-1
-- Update to 1.8.6
-
-* Tue Jan 03 2012 Johannes Lips <hannes@fedoraproject.org> - 1.8.5-1
-- Update to 1.8.5
-
-* Sun Nov 20 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.4-1
-- Update to 1.8.4
-
-* Thu Oct 13 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.3-2
-- remove the nojansi patch since jansi is in fedora
-
-* Thu Oct 13 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.3-1
-- Update to 1.8.3
-
-* Tue Sep 06 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.2-1
-- Update to 1.8.2
-
-* Sat Aug 13 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.1-3
-- adjusted the maven pom dir
-
-* Sat Aug 13 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.1-2
-- updated the nojansi patch
-
-* Sat Aug 13 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.1-1
-- Update to 1.8.1
-
-* Wed May 04 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.0-2
-- Minor changes to reflect changes to packaging guidelines
-
-* Fri Apr 29 2011 Johannes Lips <hannes@fedoraproject.org> - 1.8.0-1
-- Update to 1.8.0
-
-* Wed Feb 09 2011 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.7.7-2
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_15_Mass_Rebuild
-
-* Sat Nov 6 2010 Alexander Kurtakov <akurtako@redhat.com> 1.7.2-3
-- Build with servlet and jsp apis from tomcat6.
-
-* Thu Jun 17 2010 Lubomir Rintel <lkundrak@v3.sk> - 1.7.2-2
-- Fix a typo
-
-* Tue Apr 20 2010 Lubomir Rintel <lkundrak@v3.sk> - 1.7.2-1
-- Bump version
-
-* Fri Apr 02 2010 Lubomir Rintel <lkundrak@v3.sk> - 1.7.1-1
-- Bump version
-- Revert addition of jansi dependency
-
-* Fri Apr 02 2010 Lubomir Rintel <lkundrak@v3.sk> - 1.7.0-2
-- Add maven depmap
-
-* Wed Feb 17 2010 Lubomir Rintel <lkundrak@v3.sk> - 1.7.0-1
-- New upstream version
-- Use asm 3.1 instead of asm2
-
-* Wed Dec 04 2009 Lubomir Rintel <lkundrak@v3.sk> - 1.6.7-1
-- New upstream version
-- Make Jochen happy
-
-* Thu Dec 03 2009 Lubomir Rintel <lkundrak@v3.sk> - 1.6.6-2
-- Build with OpenJDK
-
-* Mon Nov 30 2009 Lubomir Rintel <lkundrak@v3.sk> - 1.6.6-1
-- Bump to 1.6.6
-- Don't mistakenly require itself (Jochen Schmitt, #534168#c3)
-
-* Fri Nov 27 2009 Lubomir Rintel <lkundrak@v3.sk> - 1.6.5-2
-- Hopefully fix mockbuild
-
-* Mon Nov 09 2009 Lubomir Rintel <lkundrak@v3.sk> - 1.6.5-1
-- Initial Fedora packaging
